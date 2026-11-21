@@ -1,0 +1,23 @@
+# Tasks: House
+
+- [ ] 1. Viewpoint graph and camera moves
+  - Graph data, validation test, eased camera moves, input locking during moves.
+  - _Requirements: 1.1, 1.4, 2.2_
+- [ ] 2. Desktop and touch input
+  - [x] Limited look: the mouse position steers the view, touch drag moves it (±35° / ±20°).
+  - [ ] Click/tap destinations, WASD/arrows (needs task 1).
+  - _Requirements: 1.2, 1.3, 1.5_
+- [x] 3. Living room (first area)
+  - TV, VCR with a red 00:00 clock, cabinet, sofa, rug, pumpkins, and a window onto the storm. TV and VCR are hotspots.
+  - _Requirements: 2.1_
+- [ ] 4. Remaining areas: hallway, messy room, bedroom, front yard
+  - Area loader with disposal.
+  - _Requirements: 2.1, 2.3_
+- [ ] 5. Rain and lightning
+  - [x] Lightning scheduler with unit tests, flash through the window, delayed thunder, reduce-flashing fade.
+  - [x] Rain and tape-hiss audio loops.
+  - [ ] Visible rain outside, quieter rain indoors.
+  - [ ] Lightning-only objects.
+  - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
+- [ ] 6. "Slightly wrong" changes
+  - _Requirements: 4.1, 4.2_

@@ -1,0 +1,27 @@
+# Tasks: Tapes
+
+- [x] 1. Tape model and validation
+  - `createTape(input, { id, now, spot })` with validation and label defaulting.
+  - Unit tests for empty text, whitespace, length limits and label defaulting.
+  - _Requirements: 1.2, 1.3, 1.4, 1.5_
+- [x] 2. Hiding spot placement
+  - `chooseSpot` with FNV-1a hashing and the least-occupied fallback.
+  - Unit tests for determinism and the full-house case.
+  - _Requirements: 2.1, 2.2, 2.3_
+- [x] 3. IndexedDB tape store
+  - Load, save, export to JSON and delete-all, with the in-memory fallback.
+  - _Requirements: 6.1, 6.2, 6.3, 6.4_
+- [x] 4. Tape writer overlay
+  - The VCR hotspot opens the writer; submitting creates, stores and hides the tape, then shows a hint once the write succeeds.
+  - _Requirements: 1.1, 2.4_
+- [ ] 5. Find and read
+  - Selectable tape meshes at spots; reading shows the label and decayed text.
+  - Depends on: house areas that contain the hiding spots.
+  - _Requirements: 3.1, 3.2, 3.3_
+- [ ] 6. Hold-to-rewind on the TV
+  - Rewind state machine, TV playback and returning the tape to its spot.
+  - Unit tests for completion and cancellation timings.
+  - _Requirements: 4.1, 4.2, 4.3, 4.4_
+- [x] 7. Text-only reader
+  - In settings: lists every tape with its label, date and original text, and has a "write a tape" button.
+  - _Requirements: 5.1, 5.2, 5.3_

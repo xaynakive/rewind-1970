@@ -12,7 +12,8 @@ The tapes the user finds, and how healthy they are, decide the ending. The final
 ### Requirement 1: Unlocking the ending
 #### Acceptance criteria
 1. WHEN the user has at least 5 tapes and has found every tape at least once THEN the system SHALL unlock the ending.
-2. WHEN the ending unlocks THEN the system SHALL place the final tape in the living room VCR. It SHALL be visible only during lightning until the user picks it up.
+2. WHEN the ending unlocks THEN the system SHALL place the final tape in the living room VCR. Until the user has seen it once in a lightning flash from the living room, it SHALL be visible only during lightning. After that it SHALL stay visible, so it can be selected without racing the flash (this also keeps it reachable with reduce flashing and for keyboard users).
+3. WHEN the ending unlocks THEN the system SHALL tell the user with one quiet line, without naming the tape.
 
 ### Requirement 2: Choosing the ending
 #### Acceptance criteria
@@ -37,3 +38,5 @@ The tapes the user finds, and how healthy they are, decide the ending. The final
 #### Acceptance criteria
 1. WHEN the ending finishes THEN the system SHALL return the user to the house with all their tapes intact.
 2. The system SHALL remember which endings the user has seen.
+3. The final tape SHALL stay in the VCR after it ends, and playing it again SHALL choose the ending again from the current state of the house.
+4. WHILE the final tape plays THEN the user SHALL be able to press Escape to skip to the end card, and each line SHALL be announced to screen readers.

@@ -28,6 +28,12 @@ import { createSettingsPanel } from './ui/settingsPanel.js';
 import { createPlayback } from './ui/playback.js';
 import { createHint } from './ui/hint.js';
 import { createNavArrows } from './ui/navArrows.js';
+import { createTvScreen } from './ui/tvScreen.js';
+import { buildFinalTapeMesh, FINAL_TAPE_HOTSPOT, TV_SHOTS } from './systems/house/livingRoom.js';
+import { easeInOut } from './systems/house/navigation.js';
+import {
+  isUnlocked, chooseEnding, buildFinalTape, finaleTimeline, segmentAt, segmentStart,
+} from './systems/endings/endings.js';
 
 const $ = (sel) => document.querySelector(sel);
 const stage = $('#stage');
@@ -41,6 +47,9 @@ const hint = createHint($('#hint'));
 const store = await openTapeStore();
 let tapes = await store.all();
 const pondNoticedBefore = Boolean(await store.getMeta('pondSecretNoticed').catch(() => false));
+/** Whether the final tape has been seen in the VCR (after that it stays visible), and which endings were seen. */
+const finalSeenBefore = Boolean(await store.getMeta('finalTapeSeen').catch(() => false));
+const seenEndingsBefore = (await store.getMeta('seenEndings').catch(() => null)) ?? [];
 
 // ---------- tapes ----------
 
@@ -180,6 +189,54 @@ function start(r) {
   }
   const pondTapesWaiting = () => shownArea === 'front-yard' && pondRise < 1 && tapes.some((t) => t.spot === 'pond' && t.id !== carrying);
 
+  // ----- the final tape -----
+
+  const finalTapeMesh = r.createMesh(buildFinalTapeMesh());
+  let finalSeen = finalSeenBefore;
+  const seenEndings = new Set(seenEndingsBefore);
+  let wasUnlocked = isUnlocked(tapes);
+  let unlockHintPending = false;
+  /** The final tape playing: { start, script, timeline, from, announced } or null. */
+  let finale = null;
+  const tvScreen = createTvScreen();
+  const tvText = $('#tv-text');
+
+  function startFinale() {
+    if (finale || busy || rewind.kind !== 'idle' || move) return;
+    const ending = chooseEnding(tapes, Date.now(), pond.noticed, timeScale(settings));
+    const script = buildFinalTape(tapes, ending);
+    finale = {
+      start: performance.now(),
+      script,
+      timeline: finaleTimeline(script),
+      from: { position: view.position, lookAt: lastLookAt ?? view.lookAt },
+      announced: -1,
+    };
+    hotspotLayer.setEnabled(false);
+    nav.hide();
+    hint.hide();
+    tvText.replaceChildren();
+    audio.tapeStart();
+  }
+
+  /** Escape skips to the end card. */
+  function skipFinale() {
+    if (!finale) return;
+    const t = performance.now() - finale.start;
+    const card = segmentStart(finale.timeline, 'card');
+    if (t < card) finale.start = performance.now() - card;
+  }
+
+  async function endFinale() {
+    const { ending } = finale.script;
+    finale = null;
+    seenEndings.add(ending);
+    try { await store.setMeta('seenEndings', [...seenEndings]); } catch { /* remembered for this visit */ }
+    arrive(view);
+    nextStrikeAt = performance.now() + 4000;
+    setTimeout(() => hint.show('the tape is back in the vcr. it still says 10-31-70.', 5000), 700);
+  }
+
   /** Id of the tape in the player's hands, or null. Not saved: a reload puts it back. */
   let carrying = null;
   let rewind = idle();
@@ -200,8 +257,13 @@ function start(r) {
     tapeMesh = built.meshData ? r.createMesh(built.meshData) : null;
     // A tape still under the water can't be picked up yet.
     const reachable = built.hotspots.filter((h) => h.spot !== 'pond' || pondRise >= 1);
-    hotspotLayer.set([...reachable, ...area.hotspots]);
+    // The final tape sits over the VCR, so it's listed first (on top).
+    const unlocked = isUnlocked(tapes);
+    const final = shownArea === 'living-room' && unlocked && finalSeen ? [FINAL_TAPE_HOTSPOT] : [];
+    hotspotLayer.set([...final, ...reachable, ...area.hotspots]);
     lastTapeBuild = performance.now();
+    if (unlocked && !wasUnlocked) unlockHintPending = true;
+    wasUnlocked = unlocked;
   }
 
   // ----- moving around -----
@@ -216,7 +278,7 @@ function start(r) {
   }
 
   function go(dir) {
-    if (mode.kind !== 'house' || move || busy || rewind.kind !== 'idle' || anyDialogOpen()) return;
+    if (mode.kind !== 'house' || move || finale || busy || rewind.kind !== 'idle' || anyDialogOpen()) return;
     const targetId = view.exits[dir];
     if (!targetId) return;
     // Start from where the player is actually looking, so the camera doesn't snap.
@@ -246,11 +308,26 @@ function start(r) {
       const text = FIRST_VISIT[vp.id]?.(tapes);
       if (text) setTimeout(() => { if (view === vp && !move && !anyDialogOpen()) hint.show(text); }, 600);
     }
+    if (vp.id === 'living-room' && isUnlocked(tapes) && !finalSeen) {
+      setTimeout(() => { if (view === vp && !move && !anyDialogOpen()) hint.show('something is in the vcr. it only shows when the sky lights up.', 5000); }, 900);
+    }
+  }
+
+  function showUnlockHint() {
+    unlockHintPending = false;
+    hint.show(view.area === 'living-room'
+      ? 'the vcr clicks. something slides into it.'
+      : 'downstairs, the vcr clicks. something slides into it.', 5000);
   }
 
   window.addEventListener('keydown', (e) => {
     if (anyDialogOpen() || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
     const dir = directionForKey(e.key);
+    if (finale) {
+      if (e.key === 'Escape') skipFinale();
+      if (dir || e.key === ' ' || e.key === 'Enter') e.preventDefault();
+      return;
+    }
     if (dir && mode.kind === 'house') {
       e.preventDefault();
       go(dir);
@@ -301,7 +378,8 @@ function start(r) {
 
   const playback = createPlayback($('#playback'), {
     onClose({ tapeId, rewound }) {
-      if (rewound) hint.show('the tape slips back to where you found it.');
+      if (unlockHintPending) showUnlockHint();
+      else if (rewound) hint.show('the tape slips back to where you found it.');
       else if (carrying === tapeId) hint.show('you take the tape with you. the tv is waiting.');
     },
   });
@@ -310,6 +388,7 @@ function start(r) {
     onSelect(id, e) {
       if (id.startsWith('tape:')) return findTape(id.slice(5));
       if (id === 'pond-water') return touchWater(e);
+      if (id === 'final-tape') return startFinale();
       if (id === 'vcr') return writer.open();
       if (id === 'tv') {
         if (carrying || performance.now() < suppressTvUntil) return; // handled by press/release
@@ -393,11 +472,13 @@ function start(r) {
   osdCanvas.height = 240;
   const osdCtx = osdCanvas.getContext('2d');
   let osdKey = '';
-  function updateOsd(since, progress) {
-    const time = `OCT 31 1970  ${clock(since)}`;
+  /** `frozen`: the final tape's view from inside the TV, where the clock never moves. */
+  function updateOsd(since, progress, frozen = false) {
+    const time = frozen ? 'OCT 31 1970  00:00' : `OCT 31 1970  ${clock(since)}`;
     const rewinding = rewind.kind === 'holding';
     const steps = Math.floor(progress * 10);
-    const key = `${time}|${rewinding}|${steps}|${carrying ? 1 : 0}`;
+    const holding = carrying && !frozen;
+    const key = `${time}|${rewinding}|${steps}|${holding ? 1 : 0}`;
     if (key === osdKey) return;
     osdKey = key;
     osdCtx.clearRect(0, 0, 320, 240);
@@ -411,7 +492,7 @@ function start(r) {
     } else {
       drawText(osdCtx, 'PLAY \u25B6', 16, 14, 2);
     }
-    if (carrying) drawText(osdCtx, '\u25A0 TAPE', 320 - 16 - 72, 14, 2);
+    if (holding) drawText(osdCtx, '\u25A0 TAPE', 320 - 16 - 72, 14, 2);
     drawText(osdCtx, time, 16, 212, 2);
     r.uploadCanvas(osdCanvas, 'osd');
   }
@@ -421,6 +502,96 @@ function start(r) {
     showArea(view.area);
     arrive(view);
     nextStrikeAt = now + 3500; // the first strike comes early, to set the mood
+  }
+
+  // ----- drawing -----
+
+  /** Draws the area on screen from `eye` toward `target`. Returns the view-projection matrix. */
+  function drawRoom(now, time, eye, target, flash, { ripples = null, reveal = 0, showFinal = false, tvOn = false } = {}) {
+    const area = areaOf(shownArea);
+    const proj = area.outdoors ? projOutdoors : projIndoors;
+    const viewProj = multiply(proj, lookAt(eye, target));
+    const meshes = [loader.mesh(shownArea)];
+    if (tapeMesh) meshes.push(tapeMesh);
+    if (showFinal) meshes.push(finalTapeMesh);
+    r.drawScene(meshes, {
+      viewProj,
+      camPos: eye,
+      time,
+      ripples,
+      reveal,
+      water: pondInfo.water,
+      ambient: area.ambient,
+      // While the final tape plays, the TV (the living room's first light) floods the room.
+      lights: tvOn ? area.lights(now).map((l, i) => (i === 0 ? { ...l, intensity: l.intensity * 2.4, range: l.range * 1.4 } : l)) : area.lights(now),
+      flash,
+      flashDir: area.flashDir,
+      flashColor: PALETTE.lightning,
+      sky: area.sky,
+      fogColor: area.fogColor,
+      fogNear: area.fogNear,
+      fogFar: area.fogFar,
+    });
+    return viewProj;
+  }
+
+  const lerp3 = (a, b, t) => a.map((v, i) => v + (b[i] - v) * t);
+
+  /** One frame of the final tape. */
+  function finaleFrame(now, time, reduce, since) {
+    // The frame's timestamp can be a few ms older than the click that started the tape.
+    const t = Math.max(0, now - finale.start);
+    const seg = segmentAt(finale.timeline, t);
+    if (!seg) return endFinale();
+    const local = t - seg.start;
+    const { script } = finale;
+    const d = script.decay;
+
+    if (seg.kind === 'push' || seg.kind === 'pov') {
+      let eye, target, fade = 1, glitch = 0;
+      if (seg.kind === 'push') {
+        const k = easeInOut(Math.min(1, local / seg.ms));
+        eye = lerp3(finale.from.position, TV_SHOTS.close.position, k);
+        target = lerp3(finale.from.lookAt, TV_SHOTS.close.lookAt, k);
+        glitch = reduce ? 0 : Math.max(0, (k - 0.6) / 0.4);
+        fade = Math.min(1, (seg.ms - local) / 250);
+      } else {
+        eye = TV_SHOTS.pov.position;
+        target = TV_SHOTS.pov.lookAt;
+        fade = Math.min(1, local / 600, (seg.ms - local) / 800);
+      }
+      drawRoom(now, time, eye, target, 0, { showFinal: true, tvOn: seg.kind === 'pov' });
+      updateOsd(since, 0, seg.kind === 'pov');
+      r.present({
+        source: 'scene', osd: true, time, reduce, fade: Math.max(0, fade),
+        tracking: 0.3 + 0.7 * d, bleed: 0.8 + 0.8 * d, noise: 0.07 + 0.1 * d, glitch,
+      });
+      return;
+    }
+
+    if (seg.kind === 'line' && seg.index > finale.announced) {
+      finale.announced = seg.index;
+      const p = document.createElement('p');
+      p.textContent = seg.text;
+      tvText.append(p);
+    }
+    if (seg.kind === 'card' && finale.announced < script.lines.length) {
+      finale.announced = script.lines.length;
+      const p = document.createElement('p');
+      p.textContent = `tape end. ${script.title}.`;
+      tvText.append(p);
+    }
+    tvScreen.draw(seg, local, script);
+    r.uploadCanvas(tvScreen.canvas);
+    const gap = seg.kind === 'gap';
+    r.present({
+      source: 'canvas', time, reduce,
+      fade: seg.kind === 'return' ? 0 : 1,
+      tracking: 0.3 + 0.7 * d,
+      bleed: 0.8 + 0.8 * d,
+      noise: (gap ? 0.16 : 0.07) + 0.12 * d,
+      glitch: reduce ? 0 : 0.25 * d + (gap ? 0.15 : 0),
+    });
   }
 
   // ----- frame -----
@@ -465,6 +636,12 @@ function start(r) {
       // Decay tint changes slowly: refresh tape meshes now and then.
       if (now - lastTapeBuild > (settings.demoTime ? 5000 : 60000)) rebuildTapes();
 
+      if (finale) {
+        finaleFrame(now, time, reduce, since);
+        requestAnimationFrame(frame);
+        return;
+      }
+
       // Lightning
       if (now >= nextStrikeAt) {
         strike = createStrike(Math.random, reduce);
@@ -493,10 +670,16 @@ function start(r) {
         lastLookAt = target.map((v, i) => eye[i] + (v - eye[i]) * d);
       }
       const area = areaOf(shownArea);
-      const proj = area.outdoors ? projOutdoors : projIndoors;
-      const viewProj = multiply(proj, lookAt(eye, target));
       const flash = strike ? flashIntensity(strike, now - strikeAt) * area.flashScale : 0;
-      lastViewProj = viewProj;
+
+      // The final tape: until it has been seen once, it only shows in a lightning flash.
+      const finalHere = shownArea === 'living-room' && wasUnlocked;
+      if (finalHere && !finalSeen && flash > 0.12 && view.id === 'living-room' && !move) {
+        finalSeen = true;
+        store.setMeta('finalTapeSeen', true).catch(() => {});
+        rebuildTapes();
+      }
+      const showFinal = finalHere && (finalSeen || flash > 0.12);
 
       // The pond: tapes float up while you watch, ripples spread, and sometimes the skeleton shows.
       let ripples = null, reveal = 0;
@@ -515,25 +698,8 @@ function start(r) {
         reveal = revealAt(pond, now, flash);
       }
 
-      const meshes = [loader.mesh(shownArea)];
-      if (tapeMesh) meshes.push(tapeMesh);
-      r.drawScene(meshes, {
-        viewProj,
-        camPos: eye,
-        time,
-        ripples,
-        reveal,
-        water: pondInfo.water,
-        ambient: area.ambient,
-        lights: area.lights(now),
-        flash,
-        flashDir: area.flashDir,
-        flashColor: PALETTE.lightning,
-        sky: area.sky,
-        fogColor: area.fogColor,
-        fogNear: area.fogNear,
-        fogFar: area.fogFar,
-      });
+      const viewProj = drawRoom(now, time, eye, target, flash, { ripples, reveal, showFinal });
+      lastViewProj = viewProj;
 
       // The tape you're holding makes the whole picture worse, the way a bad tape would.
       const held = carrying ? tapes.find((t) => t.id === carrying) : null;

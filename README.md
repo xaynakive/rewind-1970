@@ -8,7 +8,7 @@ The tape opens on a date that shouldn't exist: **October 31, 1970, 00:00**, year
 
 Spooky, never gore. Your memories never leave your device.
 
-## Status: milestone 4
+## Status: milestone 5
 
 Working now:
 - Cold open: a found-tape boot screen in a pixel VCR font, with tracking lines, colour bleed and grain.
@@ -30,7 +30,9 @@ All 10 hiding spots can be reached. Carry a tape from anywhere in the house to t
 
 - **The pond.** Touch the still water and ripples spread through the moon's reflection. Tapes hidden in the pond float up while you watch. And sometimes, when lightning strikes or the ripples settle, you see what's lying beneath the surface.
 
-Next: the endings, and polish. See `.kiro/specs/*/tasks.md`.
+- **The endings.** Once you have at least 5 tapes and have found every one, something appears in the VCR, at first only when the sky lights up. Play it. It's a tape you never recorded, made from your own memories, and which of four endings it becomes depends on how well you kept them.
+
+Next: polish (sound, small things that change when you're not looking) and the write-up. See `.kiro/specs/*/tasks.md`.
 
 ## Run locally
 

@@ -129,6 +129,33 @@ function buildCabinet(mb) {
   mb.quad([x0 + t, ty, z0 + t], [x1 - t, ty, z0 + t], [x1 - t, ty, z1], [x0 + t, ty, z1], shade(inside, 0.6));
 }
 
+/**
+ * The tape you never recorded, half out of the VCR's slot. Built separately
+ * from the room, because it only shows once the ending has unlocked.
+ */
+export function buildFinalTapeMesh() {
+  const mb = new MeshBuilder();
+  // The slot is at x -0.29..-0.07, y 0.67, on the VCR's front face (z = -2.25).
+  mb.box([-0.18, 0.67, -2.205], [0.2, 0.026, 0.09], shade(PALETTE.void, 1.6));
+  mb.quad([-0.26, 0.694, -2.24], [-0.1, 0.694, -2.24], [-0.1, 0.694, -2.17], [-0.26, 0.694, -2.17], PALETTE.tapeLabel, 0.75);
+  return mb.build();
+}
+
+export const FINAL_TAPE_HOTSPOT = {
+  id: 'final-tape',
+  label: 'tape: 10-31-70',
+  tag: '10-31-70',
+  min: [-0.33, 0.62, -2.27],
+  max: [-0.03, 0.74, -2.12],
+};
+
+/** Camera shots for the final tape: pushing into the screen, and looking out from inside the TV. */
+export const TV_SHOTS = {
+  close: { position: [0, 1.09, -1.5], lookAt: [0, 1.09, -2.5] },
+  // Wide enough to take in the sofa, the rug and the empty room behind it.
+  pov: { position: [0.04, 1.08, -2.12], lookAt: [-1.3, 0.45, 1.2] },
+};
+
 function bounds({ center, size }, pad) {
   return {
     min: center.map((c, i) => c - size[i] / 2 - pad),

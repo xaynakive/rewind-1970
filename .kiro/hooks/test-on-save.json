@@ -1,0 +1,17 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "test-on-save",
+      "description": "Run the unit tests whenever the agent saves a JavaScript file in src/ or tests/.",
+      "enabled": true,
+      "trigger": "PostFileSave",
+      "matcher": "(^|/)(src|tests)/.*\\.js$",
+      "action": {
+        "type": "command",
+        "command": "npm test --silent 2>&1 | tail -n 12"
+      },
+      "timeout": 120
+    }
+  ]
+}

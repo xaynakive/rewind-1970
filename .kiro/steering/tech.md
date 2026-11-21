@@ -34,4 +34,5 @@ Three.js was the first plan. The build sandbox has no access to npm or CDNs, and
 
 ## Testing
 - Unit tests use Node's built-in runner (`node:test`), so there is nothing to install. Run with `npm test`.
+- Spec rules that must hold for every input (bounds, invariants, "never changes the text") get a property test in `tests/properties.test.js`, using `forAll` and `gen` from `tests/helpers/property.js`. Failures print the seed and input so they can be replayed.
 - Visual systems are checked in a browser against `art-style.md`. To run locally, serve the folder over HTTP (ES modules don't load from `file://`), for example `npm run serve` and open http://localhost:8000.

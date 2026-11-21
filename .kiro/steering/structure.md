@@ -9,7 +9,7 @@ rewind-1970/
 ├── .kiro/
 │   ├── steering/        # product, art style, tech, structure rules
 │   ├── specs/           # one folder per system: requirements, design, tasks
-│   └── hooks/           # agent hooks that keep code consistent with specs (planned)
+│   └── hooks/           # agent hooks: tests on save, spec sync, checks before the agent stops
 ├── index.html           # stage, dialogs (tape writer, settings, playback, case)
 ├── style.css
 ├── package.json         # scripts only: test, serve. No dependencies.
@@ -31,9 +31,9 @@ rewind-1970/
 │   ├── audio/           # Web Audio synth: hiss, rain, thunder, tape motor, rewind whirr
 │   └── ui/              # DOM overlays: tape writer, playback, settings + text-only reader,
 │                        #   exit arrows, hints, the case dialog
-├── tests/               # node:test unit tests for pure logic
+├── tests/               # node:test unit tests for pure logic, property tests, helpers/
 └── docs/
-    └── writeup.md       # hackathon write-up (planned)
+    └── writeup.md       # hackathon write-up: how Kiro was used
 ```
 
 - One spec folder in `.kiro/specs/` per folder in `src/systems/`.

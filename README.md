@@ -2,13 +2,15 @@
 
 > a haunted journal. your memories become VHS tapes hidden around a dark house, and you have to find and rewind them before they decay.
 
-A Kiroween entry (Costume Contest), and a strange room inside [Elsewhere](https://xaynakive.com).
+**▶ [Play it in your browser](https://xaynakive.github.io/rewind-1970/)**: no install, works on desktop and phone. Turn the sound on.
+
+A Kiroween entry (Costume Contest), and a strange room inside [Elsewhere](https://xaynakive.com). How it was built with Kiro: [docs/writeup.md](docs/writeup.md).
 
 The tape opens on a date that shouldn't exist: **October 31, 1970, 00:00**, years before VHS was invented. Press play and you're inside the house. Write a memory into the VCR and it becomes a tape, hidden somewhere you'll have to go looking for it. Tapes you neglect slowly decay. Rewinding them on the living-room TV brings them back.
 
 Spooky, never gore. Your memories never leave your device.
 
-## Status: milestone 5
+## Status
 
 Working now:
 - Cold open: a found-tape boot screen in a pixel VCR font, with tracking lines, colour bleed and grain.
@@ -67,7 +69,9 @@ This project is spec-first. Everything in `.kiro/` is part of the entry:
 
 - **`.kiro/steering/`**: the rules every change follows. `product.md` covers tone ("suggestion over shock", decay never deletes a memory). `art-style.md` covers the PS1 rendering rules, triangle budgets, the 9-colour palette and flashing limits. `tech.md` covers the stack and conventions, including the decision record for raw WebGL. `structure.md` covers the layout.
 - **`.kiro/specs/`**: one spec per system (cold open, tapes, decay, house, pond, endings, mystery). Each has requirements written as acceptance criteria, a design, and a task list that is ticked off as the code lands.
-- Pure logic named in the specs (decay curve, tape placement, lightning timing, boot lines) is covered by unit tests in `tests/`, which check the acceptance criteria directly.
+- Pure logic named in the specs (decay curve, tape placement, lightning timing, boot lines, the case) is covered by unit tests in `tests/`, which check the acceptance criteria directly. `tests/properties.test.js` adds property-based tests: the spec rules (decay never passes 0.85, drift never changes a word, the boot screen always fits) checked over hundreds of generated inputs, with a small seeded helper instead of a library.
+- **`.kiro/hooks/`**: agent hooks. Tests run when the agent saves a source file, a spec-sync check runs when a system changes, and the agent can't finish a turn while a module fails to parse or a test fails.
+- The full story of how Kiro was used is in [docs/writeup.md](docs/writeup.md).
 
 ## Accessibility
 

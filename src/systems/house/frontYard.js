@@ -98,7 +98,8 @@ export function buildFrontYard() {
       viewpoint: 'yard-pond',
     },
     sky: PALETTE.night,
-    fogColor: [0.07, 0.085, 0.12],
+    // Deep blue: the picture's brightness lifts it, so it starts dark.
+    fogColor: [0.025, 0.035, 0.075],
     fogNear: 7,
     fogFar: 30,
     ambient: [0.14, 0.15, 0.19],

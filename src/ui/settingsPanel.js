@@ -15,9 +15,14 @@ export function createSettingsPanel(dialog, { settings, onChange, listTapes, del
   const reduce = dialog.querySelector('[name="reduceFlashing"]');
   const sound = dialog.querySelector('[name="sound"]');
   const demo = dialog.querySelector('[name="demoTime"]');
+  const brightness = dialog.querySelector('[name="brightness"]');
+  const clear = dialog.querySelector('[name="clearPicture"]');
   const list = dialog.querySelector('.reader-list');
   const status = dialog.querySelector('.settings-status');
 
+  // Live while dragging, so you can see the room brighten behind the panel.
+  brightness.addEventListener('input', () => onChange({ ...settings, brightness: Number(brightness.value) }));
+  clear.addEventListener('change', () => onChange({ ...settings, clearPicture: clear.checked }));
   reduce.addEventListener('change', () => onChange({ ...settings, reduceFlashing: reduce.checked }));
   sound.addEventListener('change', () => onChange({ ...settings, sound: sound.checked }));
   demo.addEventListener('change', () => onChange({ ...settings, demoTime: demo.checked }));
@@ -77,6 +82,8 @@ export function createSettingsPanel(dialog, { settings, onChange, listTapes, del
       reduce.checked = settings.reduceFlashing;
       sound.checked = settings.sound;
       demo.checked = settings.demoTime;
+      brightness.value = String(settings.brightness);
+      clear.checked = settings.clearPicture;
       status.textContent = '';
       await renderList();
       dialog.showModal();

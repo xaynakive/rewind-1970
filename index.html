@@ -25,7 +25,10 @@
     </div>
   </main>
 
-  <button id="settings-button" class="settings-button" type="button">settings</button>
+  <div class="corner-buttons">
+    <button id="fullscreen-button" class="corner-button" type="button" title="full screen (F)">full screen</button>
+    <button id="settings-button" class="corner-button" type="button">settings</button>
+  </div>
 
   <dialog id="tape-writer" class="panel writer" aria-labelledby="writer-title">
     <form>
@@ -49,6 +52,14 @@
 
   <dialog id="settings" class="panel settings" aria-labelledby="settings-title">
     <h2 id="settings-title">settings</h2>
+    <h3>picture</h3>
+    <label class="slider">
+      <span>brightness</span>
+      <input type="range" name="brightness" min="0" max="100" step="1" aria-describedby="brightness-note">
+      <span id="brightness-note" class="toggle-note">moody ↔ bright</span>
+    </label>
+    <label class="toggle"><input type="checkbox" name="clearPicture"> clear picture <span class="toggle-note">(less static, tracking and scanlines; easier to see)</span></label>
+    <h3>comfort</h3>
     <label class="toggle"><input type="checkbox" name="reduceFlashing"> reduce flashing</label>
     <label class="toggle"><input type="checkbox" name="sound"> sound</label>
     <label class="toggle"><input type="checkbox" name="demoTime"> demo time: one minute is one day <span class="toggle-note">(tapes decay much faster)</span></label>

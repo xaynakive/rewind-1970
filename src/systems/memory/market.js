@@ -26,7 +26,6 @@ const paper = [0.86, 0.8, 0.66];
 const ink = [0.12, 0.1, 0.12];
 const lanternRed = [0.85, 0.16, 0.1];
 const brass = [0.7, 0.52, 0.22];
-const coatRed = mix(PALETTE.bloodMoon, PALETTE.rotWood, 0.25);
 
 /** Awning stripe colours, one pair per stall, so each stall reads as its own place. */
 const AWNINGS = [
@@ -43,19 +42,19 @@ const AWNINGS = [
 const zCentre = (i) => -1.8 - STALL_W * i;
 
 /** Axis-aligned 3D bounds of a box given by centre and size. */
-const boundsOf = ([cx, cy, cz], [sx, sy, sz]) => ({
+export const boundsOf = ([cx, cy, cz], [sx, sy, sz]) => ({
   min: [cx - sx / 2, cy - sy / 2, cz - sz / 2],
   max: [cx + sx / 2, cy + sy / 2, cz + sz / 2],
 });
-const grow = (b, k) => ({ min: b.min.map((v) => v - k), max: b.max.map((v) => v + k) });
+export const grow = (b, k) => ({ min: b.min.map((v) => v - k), max: b.max.map((v) => v + k) });
 /** Floor-plane collider from a box given by centre and size. */
-const footprint = ([cx, , cz], [sx, , sz], low = false) => ({
+export const footprint = ([cx, , cz], [sx, , sz], low = false) => ({
   min: [cx - sx / 2, cz - sz / 2], max: [cx + sx / 2, cz + sz / 2], low,
 });
 
 // ---------- inspect-view objects (centred at the origin, glossy) ----------
 
-function noteMesh(lines = 6) {
+export function noteMesh(lines = 6) {
   const mb = new MeshBuilder();
   mb.box([0, 0, 0], [0.21, 0.004, 0.27], paper, GLOSS);
   // A fold across the middle, and lines of handwriting.
@@ -95,7 +94,7 @@ function keyMesh() {
 }
 
 /** Where to keep each inspect mesh so it fills the view: [mesh, size]. */
-function inspectOf(mb, size) {
+export function inspectOf(mb, size) {
   return { mesh: mb.build(), size };
 }
 
@@ -562,6 +561,7 @@ export function buildMarket() {
     needs: 'key',
     lockedText: "it's locked. june had a key on a red string.",
     oneWay: true,
+    openLine: 'the shutter rolls up. the stairwell is cold.',
   });
 
   const mesh = new MeshBuilder();
@@ -586,6 +586,7 @@ export function buildMarket() {
     route: [[2.3, -27], [2.3, -14], [2.3, -2], [-2.3, -2], [-2.3, -14], [-2.3, -27], [0, -27.6]],
     wakeAfterNotes: 2,
     june: { pos: [0, -33.2], yaw: 0, glimpse: { pos: [-2.3, -12.6], until: -11 } },
+    exitPart: 'shutter',
     exitTrigger: { pos: [0, -32], radius: 1.7 },
     ambient: [0.11, 0.08, 0.09],
     fog: { color: [0.035, 0.025, 0.035], near: 5, far: 26 },
@@ -600,7 +601,6 @@ export function buildMarket() {
       glimpse: 'june? wait.',
       wake: 'the lanterns flicker. someone else is walking the aisles.',
       caught: 'the tape skips back.',
-      shutterOpen: 'the shutter rolls up. the stairwell is cold.',
     },
   };
 }
@@ -611,7 +611,7 @@ function shutterStall(mb, colliders, side, zc) {
   colliders.push(footprint([x, 0, zc], [0.1, 0, STALL_W]));
 }
 
-function clockFace(mb, [x, y, z], r, standing = false) {
+export function clockFace(mb, [x, y, z], r, standing = false) {
   // A round face toward the aisle (-x for the right row), hands both pointing up: 00:00.
   const segs = 10;
   const face = [0.86, 0.82, 0.7];
@@ -625,29 +625,6 @@ function clockFace(mb, [x, y, z], r, standing = false) {
   if (standing) mb.box([x, y - r - 0.06, z], [0.1, 0.12, 0.2], darkWood);
 }
 
-/** The figure: June, or the thing wearing her shape. Built at the origin facing -z. */
-export function buildFigure({ face = 'hair' } = {}) {
-  const mb = new MeshBuilder();
-  mb.box([-0.11, 0.42, 0], [0.12, 0.84, 0.14], [0.08, 0.07, 0.08]);
-  mb.box([0.11, 0.42, 0], [0.12, 0.84, 0.14], [0.08, 0.07, 0.08]);
-  // A long red coat, wider at the hem.
-  mb.box([0, 0.95, 0], [0.5, 0.5, 0.32], coatRed);
-  mb.box([0, 1.4, 0], [0.44, 0.5, 0.28], coatRed);
-  mb.box([-0.29, 1.25, 0], [0.11, 0.7, 0.13], shade(coatRed, 0.85));
-  mb.box([0.29, 1.25, 0], [0.11, 0.7, 0.13], shade(coatRed, 0.85));
-  // Belt, buttons and collar, so the coat reads as a coat even in a strong light.
-  mb.box([0, 1.18, 0], [0.46, 0.06, 0.3], shade(coatRed, 0.35));
-  for (const y of [1.0, 1.32, 1.5]) mb.box([0, y, -0.15], [0.04, 0.04, 0.02], shade(coatRed, 0.3));
-  mb.box([0, 1.62, 0], [0.4, 0.08, 0.3], shade(coatRed, 0.7));
-  mb.box([0, 0.72, 0], [0.5, 0.04, 0.32], shade(coatRed, 0.6)); // hem
-  mb.box([0, 1.7, 0], [0.12, 0.1, 0.12], [0.6, 0.5, 0.44]);
-  // Head: dark hair all round. The presence has static where the face should be.
-  mb.blob([0, 1.88, 0], 0.15, 1.15, 8, 5, [0.05, 0.04, 0.05]);
-  mb.box([0, 1.72, 0.1], [0.3, 0.4, 0.06], [0.05, 0.04, 0.05]); // hair down the back
-  if (face === 'static') mb.box([0, 1.87, -0.13], [0.2, 0.24, 0.04], [0.75, 0.78, 0.8], GLOW);
-  return mb.build();
-}
-
 /** A small mesh for an item in the world: a flat box in its own colour. */
 export function buildItemMesh(item) {
   const mb = new MeshBuilder();
@@ -655,6 +632,7 @@ export function buildItemMesh(item) {
   return mb.build();
 }
 
+export { buildFigure } from './figures.js';
 export const MARKET_ITEM_IDS = ['note-noodles', 'note-fortune', 'note-clocks', 'note-musicbox', 'photo', 'key'];
 export const MARKET_NOTE_IDS = ['note-noodles', 'note-fortune', 'note-clocks', 'note-musicbox'];
 export { UNFOGGED };

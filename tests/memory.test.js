@@ -1,4 +1,4 @@
-// Memories: walking, reaching, the presence, progress, and the night market's layout.
+// Memories: walking, reaching, the presence, progress, and the layouts of the night market and the school.
 // Spec: .kiro/specs/memories
 
 import { test } from 'node:test';
@@ -13,6 +13,7 @@ import {
 } from '../src/systems/memory/presence.js';
 import { normalizeMemories, withEntry, withoutOpened, countTaken, emptyMemory } from '../src/systems/memory/progress.js';
 import { buildMarket, MARKET_ITEM_IDS, MARKET_NOTE_IDS } from '../src/systems/memory/market.js';
+import { buildSchool, SCHOOL_ITEM_IDS } from '../src/systems/memory/school.js';
 
 const box = (x0, z0, x1, z1, low = false) => ({ min: [x0, z0], max: [x1, z1], low });
 const overlaps = (p, b, r = RADIUS) => {
@@ -265,5 +266,65 @@ test('the shutter needs the key and blocks the way until it opens', () => {
 
 test('her lines follow the tone rules', () => {
   const words = [...market.endLines, ...Object.values(market.lines), ...market.items.map((i) => i.text)].join(' ').toLowerCase();
+  for (const w of ['blood', 'gore', 'kill', 'dead body', 'corpse']) assert.ok(!words.includes(w), w);
+});
+
+// ----- the school at night (Requirement 8) -----
+
+const school = buildSchool();
+
+test('the school holds four notes, the class photo and the keys, each in its own place', () => {
+  assert.deepEqual(school.items.map((i) => i.id).sort(), [...SCHOOL_ITEM_IDS].sort());
+  assert.equal(school.items.filter((i) => i.kind === 'note').length, 4);
+  const containers = school.items.map((i) => i.inside ?? i.needsOpen ?? i.id);
+  assert.equal(new Set(containers).size, containers.length);
+  for (const it of school.items) {
+    const c = it.inside ?? it.needsOpen;
+    if (c) assert.ok(school.parts.some((p) => p.id === c), `${it.id} is in ${c}`);
+  }
+  // Only the note by the sink lies in the open.
+  assert.deepEqual(school.items.filter((i) => !(i.inside ?? i.needsOpen)).map((i) => i.id), ['note-mirror']);
+});
+
+test('school: the start, checkpoints, route, hiding exits and June are free to stand on', () => {
+  const cols = blocking(school);
+  const spots = [school.start.pos, ...school.items.map((i) => i.checkpoint.pos), ...school.route,
+    ...school.hides.map((h) => h.exit.pos), school.june.glimpse.pos, school.exitTrigger.pos];
+  for (const p of spots) for (const b of cols) assert.ok(!overlaps(p, b), `${p} overlaps ${JSON.stringify(b)}`);
+});
+
+test('school: every item can be reached from where you would stand', () => {
+  const cols = school.colliders;
+  for (const it of school.items) {
+    let ok = false;
+    for (let dx = -2; dx <= 2 && !ok; dx += 0.1) {
+      for (let dz = -2; dz <= 2 && !ok; dz += 0.1) {
+        const p = [it.pos[0] + dx, it.pos[2] + dz];
+        if (cols.some((b) => overlaps(p, b))) continue;
+        const eye = [p[0], 1.6, p[1]];
+        if (Math.hypot(...it.pos.map((v, i) => v - eye[i])) < REACH - 0.15) ok = true;
+      }
+    }
+    assert.ok(ok, `${it.id} is out of reach`);
+  }
+});
+
+test('the stair door needs the keys and blocks the way to June until it opens', () => {
+  const d = school.parts.find((p) => p.id === school.exitPart);
+  assert.equal(d.id, 'stair-door');
+  assert.equal(d.needs, 'keys');
+  assert.ok(d.oneWay && d.collider && d.lockedText.length > 0 && d.openLine.length > 0);
+  assert.ok(!segmentClear([0, -28], school.exitTrigger.pos, blocking(school)), 'the stairs are behind it');
+  assert.ok(segmentClear([0, -28], school.exitTrigger.pos, school.colliders), 'and open once it opens');
+});
+
+test('school: two lockers and a stall to hide in', () => {
+  assert.deepEqual(school.hides.map((h) => h.id).sort(), ['locker-14', 'locker-3', 'stall']);
+  assert.equal(school.hides.filter((h) => h.overlay === 'slats').length, 2);
+});
+
+test('school: the words follow the tone rules', () => {
+  const words = [...school.endLines, ...Object.values(school.lines), ...school.items.map((i) => i.text),
+    ...school.parts.map((p) => `${p.lockedText ?? ''} ${p.openLine ?? ''}`)].join(' ').toLowerCase();
   for (const w of ['blood', 'gore', 'kill', 'dead body', 'corpse']) assert.ok(!words.includes(w), w);
 });

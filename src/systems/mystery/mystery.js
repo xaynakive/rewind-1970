@@ -18,6 +18,7 @@ export const HOUSE_TAPES = [
   {
     id: 'house-2',
     spot: 'house-grave',
+    memory: 'school',
     label: 'the stones',
     reveal: 'lightning',
     decay: 0.65,

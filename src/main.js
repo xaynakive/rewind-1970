@@ -40,6 +40,7 @@ import {
   isUnlocked, chooseEnding, buildFinalTape, finaleTimeline, segmentAt, segmentStart,
 } from './systems/endings/endings.js';
 import { buildMarket } from './systems/memory/market.js';
+import { buildSchool } from './systems/memory/school.js';
 import { createMemoryScene } from './systems/memory/memoryScene.js';
 import { normalizeMemories } from './systems/memory/progress.js';
 import { createMemoryHud } from './ui/memoryHud.js';
@@ -69,7 +70,7 @@ async function saveMystery(next) {
 }
 // ---------- her memories, walkable (spec: .kiro/specs/memories) ----------
 
-const MEMORY_LEVELS = { market: buildMarket };
+const MEMORY_LEVELS = { market: buildMarket, school: buildSchool };
 let memories = normalizeMemories(await store.getMeta('memories').catch(() => null), Object.keys(MEMORY_LEVELS));
 async function saveMemory(id, next) {
   memories = { ...memories, [id]: next };

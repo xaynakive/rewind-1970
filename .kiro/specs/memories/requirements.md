@@ -58,14 +58,14 @@ Tone: spooky, never gore (steering: `product.md`). Nobody is hurt on screen. Bei
 ### Requirement 5: The presence
 **User story:** As a user, I want something to be in there with me, so the memory is frightening without being violent.
 #### Acceptance criteria
-1. The presence SHALL appear after the user has found two notes, and SHALL patrol the market on a fixed route.
+1. The presence SHALL appear after the user has found two notes, and SHALL patrol the memory on a fixed route.
 2. WHEN the presence can see the user (within 9 m, 14 m when the flashlight is on, inside its view, with nothing in between, and the user not hidden) THEN it SHALL hunt the user. It SHALL move slower than the user walks, so walking away always works.
 3. WHEN it loses sight of the user for 3 s THEN it SHALL search where it last saw them, then go back to patrolling.
 4. WHEN the presence reaches the user THEN the tape SHALL snap to static (a fade with reduce flashing) and the user SHALL return to the last checkpoint. Items and notes found SHALL be kept.
 5. WHILE the user is in a hiding place THEN the presence SHALL NOT see them, unless it saw them go in.
 6. WHILE story mode is on THEN the presence SHALL never hunt. If it sees the user it SHALL stop, stare, and fade away.
 7. The user SHALL be warned of the presence by sound (footsteps and a heartbeat that grow louder as it comes closer), not only by sight.
-8. The presence SHALL never be shown in detail: a tall figure in June's red coat, with static where the face should be.
+8. The presence SHALL never be shown in detail: a tall figure (in June's red coat in the market, a caretaker's grey coat in the school), with static where the face should be.
 
 ### Requirement 6: The night market
 **User story:** As a user, I want the market to feel like a real place I'm remembering.
@@ -81,3 +81,16 @@ Tone: spooky, never gore (steering: `product.md`). Nobody is hurt on screen. Bei
 1. The user SHALL carry a flashlight, on by default, toggled with L or the "light" button.
 2. Things the user can still take SHALL glint softly every few seconds. With "clear picture" on they SHALL glow steadily.
 3. The brightness and clear-picture settings SHALL apply inside memories exactly as in the house.
+
+### Requirement 8: The school at night
+**User story:** As a user, I want a second memory, from the grave tape, where I learn how close the twins were and how Edith began to lose June.
+#### Acceptance criteria
+1. The grave tape (`house-2`) SHALL offer "step inside" once rewound, and SHALL open the school at night, March 14 1962.
+2. The school SHALL be a corridor of lockers with tall windows onto a storm, opening onto the twins' classroom, a music room and the girls' bathroom, with a chained door to the stairs at the far end. Lightning SHALL show in the windows by the house's lightning rules, including reduce flashing.
+3. It SHALL hold four of Edith's notes, the class photo and the caretaker's keys. Five of them SHALL be behind something the user opens (June's locker, the twins' desks, the teacher's drawer, the piano), and the note by the bathroom sink SHALL lie in the open.
+4. The stair door SHALL open only with the caretaker's keys. June waits at the bottom of the stairs. WHEN the user comes close THEN the memory SHALL end with its closing lines and return to the house.
+5. The presence SHALL be a caretaker in a grey coat carrying a lamp, and the lamp SHALL light the corridor around it, so the user sees it coming.
+6. The user SHALL be able to hide in two lockers (looking out through the vents) and in a bathroom stall.
+7. June SHALL be glimpsed once in the corridor before the end, and SHALL be gone when the user comes close.
+8. A checkpoint SHALL be saved at the entrance and each time something is taken.
+9. Nobody SHALL be hurt, and the words SHALL follow the house's tone rules.

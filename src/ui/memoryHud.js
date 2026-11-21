@@ -131,8 +131,10 @@ export function createMemoryHud(root, dialogs, handlers) {
       inventory.hidden = false;
     },
 
-    setHiding(on) {
+    /** `overlay`: 'slats' for looking out through a locker's vents. */
+    setHiding(on, overlay) {
       root.classList.toggle('hiding', on);
+      root.classList.toggle('slats', on && overlay === 'slats');
     },
 
     setInventory(names) {

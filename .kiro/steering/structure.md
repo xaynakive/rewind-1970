@@ -27,7 +27,7 @@ rewind-1970/
 │   │   ├── pond/        # ripples, glimpses of the skeleton, noticing the secret
 │   │   ├── endings/     # unlock, choosing the ending, the final tape's script and timeline
 │   │   ├── mystery/     # the previous resident's tapes, when they appear, the case
-│   │   └── memory/      # walking inside her tapes: walker, reach, presence, progress, levels, the running scene
+│   │   └── memory/      # walking inside her tapes: walker, reach, presence, progress, figures, the levels (market.js, school.js), the running scene
 │   ├── storage/         # IndexedDB access
 │   ├── audio/           # Web Audio synth: hiss, rain, thunder, tape motor, rewind whirr
 │   └── ui/              # DOM overlays: tape writer, playback, settings + text-only reader,

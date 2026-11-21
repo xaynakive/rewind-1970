@@ -7,16 +7,18 @@
 | `reach.js` | what you're looking at: centre ray against boxes, then aim assist | yes |
 | `presence.js` | the presence's state machine | yes |
 | `progress.js` | what's been taken in each memory, as stored | yes |
-| `market.js` | the night market: geometry and level data | builds meshes |
+| `figures.js` | June and the presence: `buildFigure({ face, coat, lamp })` | builds meshes |
+| `market.js` | the night market: geometry and level data, plus shared helpers (`boundsOf`, `grow`, `footprint`, `noteMesh`, `inspectOf`, `clockFace`) | builds meshes |
+| `school.js` | the school at night: geometry and level data | builds meshes |
 | `memoryScene.js` | runs a memory: input, animation, sound levels, drawing | no |
 
 UI lives in `src/ui/memoryHud.js` (prompt, story lines, inspect caption, inventory, touch buttons, pause menu, notes book). `main.js` starts a memory from the playback dialog and hands every frame to it while it runs.
 
 ## Entering and leaving
-- `HOUSE_TAPES[0]` (`house-1`, the mailbox tape) has `memory: 'market'`. Once rewound, its playback shows **step inside**, right after the rewind and on every later play.
+- `HOUSE_TAPES[0]` (`house-1`, the mailbox tape) has `memory: 'market'`; `HOUSE_TAPES[1]` (`house-2`, the grave tape) has `memory: 'school'`. `main.js` maps ids to builders in `MEMORY_LEVELS`. Once rewound, its playback shows **step inside**, right after the rewind and on every later play.
 - Entering: house hotspots and exit arrows hide, the corner buttons hide (`body.in-memory`), rain drops to 12%, and the scene starts in `enter` mode: 1.1 s of glitch fading in (a plain fade with reduce flashing).
 - Leaving (pause menu) or finishing returns to the same viewpoint in the house. The house clock carries on from where it was.
-- Progress is saved under `meta['memories']`: `{ market: { taken: string[], opened: string[], checkpoint: string, done: boolean } }`. A finished memory can be replayed from the start.
+- Progress is saved under `meta['memories']`: `{ market: {...}, school: { taken: string[], opened: string[], checkpoint: string, done: boolean } }`. A finished memory can be replayed from the start.
 
 ## Walking (`walker.js`)
 - Yaw 0 looks toward −z; positive yaw turns right. Eye height 1.6 m, radius 0.3 m.
@@ -79,6 +81,26 @@ Lighting: the 3 lights nearest the eye (lanterns and stall lights, weighted), fl
 
 Ending: once the shutter is open, coming within 1.7 m of `(0, −32)` turns the view toward June and plays three lines, 3.6 s each, then static.
 
+## The school at night (`school.js`)
+March 14 1962, 21:12. A corridor 3.5 m wide (x −1.5..2) from the start (z = 3) to the stair door (z = −30), tube lights every 4 m (two flicker), tall windows on the east wall, a clock at 00:00 over the bathroom door.
+
+| Place | What you open | What you find |
+|---|---|---|
+| lockers, z 0..−8 (16) | locker 7, June's (door) | the caretaker's keys |
+| | lockers 3 and 14 | hiding places, seen through the vents (`overlay: 'slats'`) |
+| classroom, x −9.5..−1.5, z −8..−16 | June's desk (lid) | note: we swapped desks |
+| | Edith's desk (lid) | the class photo, one face scratched out |
+| | the teacher's drawer | the register: june. june. june. |
+| music room, z −18..−26 | the piano cover (lid) | note: left hand and right hand |
+| girls' bathroom, x 2..7 | nothing (by the sink) | note: only one of us in the mirror |
+| | the middle stall | hiding place |
+
+The stair door needs `keys`, opens one way at rate 1.2 with its own `openLine`, and is the level's `exitPart`. June (uniform, scaled 0.88) waits at (−0.4, −33.6); the exit trigger is 1.6 m around (−0.4, −32.4). She is glimpsed once at (0.3, −16).
+
+The caretaker walks the corridor and looks into the music room and the classroom. Its lamp is always one of the three lights drawn (intensity 1.3, range 7 m), so its light comes down the corridor ahead of it.
+
+Level options added for this (the market uses the defaults): `exitPart`, `part.openLine`, `part.rate`, `june.glimpse`, `juneLook`, `presenceLook`, `presenceLamp`, `storm` with `flashDir` and `flashScale` (lightning from `house/lightning.js`, so reduce flashing applies), `sky`, and `hide.overlay`.
+
 ## The inspect view
 - The scene pass renders at twice the resolution (`renderer.setDetail(2)`), which also halves vertex wobble.
 - The object is alone, at the origin, drawn with emissive code 7 (glossy). The fragment shader adds a reflection of a small studio: a dark floor, a cool sky, a warm horizon line and a bright strip light that sweeps with `uSweep`.
@@ -89,4 +111,4 @@ Ending: once the shutter is open, coming within 1.7 m of `(0, −32)` turns the 
 `footstep`, `presenceStep(level)`, `furniture(kind)`, `staticBurst(seconds)`, and `setMemoryLevels({ heartbeat, murmur, radio })`. The heartbeat beats faster and louder as the presence comes closer (from 9 m, 14 m while hunting).
 
 ## Testing
-`tests/memory.test.js`: walking speeds, sliding, never ending a step in a box (property), pitch limits, line of sight, reach and aim assist, every presence rule including "story mode never catches" (property), progress normalising, and the market's layout (items, free checkpoints and route, everything reachable, the shutter, tone words). The browser check walks through every item, the hiding places, a catch, story mode, the ending and leaving.
+`tests/memory.test.js`: walking speeds, sliding, never ending a step in a box (property), pitch limits, line of sight, reach and aim assist, every presence rule including "story mode never catches" (property), progress normalising, and the layout of both memories (items, free checkpoints and route, everything reachable, the locked exit, tone words). The browser check walks through every item, the hiding places, a catch, story mode, the ending and leaving.

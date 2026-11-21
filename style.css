@@ -380,9 +380,12 @@ body.in-memory .corner-buttons { display: none; }
 .mem-help.visible { opacity: 0.9; }
 
 .mem-inventory {
-  position: absolute; left: 16px; bottom: 16px; margin: 0; padding: 0;
-  list-style: none; display: flex; flex-wrap: wrap; gap: 6px; max-width: 60%;
+  /* Top right: the VHS date stamp owns the bottom left, PLAY the top left. */
+  position: absolute; right: 16px; top: 16px; margin: 0; padding: 0;
+  list-style: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 46%;
 }
+/* On touch screens the notes button sits in that corner. */
+@media (pointer: coarse) { .mem-inventory { top: 96px; } }
 .mem-inventory li {
   font-family: var(--mono); font-size: clamp(13px, 1.4vw, 17px);
   color: #f4ecd6; background: rgba(13, 12, 16, 0.78);
@@ -425,3 +428,13 @@ body.in-memory .corner-buttons { display: none; }
 .mem-notes-list h3 { margin: 0 0 0.3rem; font-size: 1rem; letter-spacing: 0.06em; }
 .mem-notes-list .reader-text { font-size: 1.1rem; }
 .playback .enter-memory { border-color: var(--crt-glow); color: var(--crt-glow); }
+/* Hiding in a locker: you look out through its vents. */
+.memory-hud.slats .mem-vignette {
+  background:
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0 18px, transparent 18px 40px),
+    radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.9) 100%);
+}
+
+/* Words stay above the hiding overlays. */
+.mem-vignette { z-index: 1; }
+.mem-prompt, .mem-line, .mem-help, .mem-caption, .mem-inventory, .mem-touch, .mem-crosshair { z-index: 2; }

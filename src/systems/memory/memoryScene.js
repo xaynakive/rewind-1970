@@ -10,7 +10,10 @@ import { step, look, forwardOf, rightOf, segmentClear, EYE_HEIGHT } from './walk
 import { pick, REACH } from './reach.js';
 import { createPresence, tickPresence, wake, resetAfterCatch, sees } from './presence.js';
 import { withEntry, countTaken } from './progress.js';
-import { buildFigure, buildItemMesh } from './market.js';
+import { buildItemMesh } from './market.js';
+import { buildFigure } from './figures.js';
+import { createStrike, flashIntensity, strikeLength, nextStrikeDelay } from '../house/lightning.js';
+import { scaling } from '../../render/math.js';
 
 const MOUSE_SENS = 0.0024;
 const TOUCH_LOOK = 0.006;
@@ -36,8 +39,9 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
   const extraMeshes = level.extra.map(mk);
   const partById = new Map(level.parts.map((p) => [p.id, { ...p, gl: mk(p.mesh), open: 0, target: 0 }]));
   const itemById = new Map(level.items.map((it) => [it.id, { ...it, gl: mk(buildItemMesh(it)), inspectGl: mk(it.inspect.mesh) }]));
-  const presenceMesh = mk(buildFigure({ face: 'static' }));
-  const juneMesh = mk(buildFigure({ face: 'hair' }));
+  const presenceMesh = mk(buildFigure({ face: 'static', ...(level.presenceLook ?? {}) }));
+  const juneMesh = mk(buildFigure({ face: 'hair', ...(level.juneLook ?? {}) }));
+  const juneScale = level.juneLook?.scale ?? 1;
 
   // ----- state -----
   let progress = { ...saved, opened: [] };
@@ -62,7 +66,10 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
   let target = null; // id of what the user is looking at
   let walkedSinceStep = 0;
   let presenceWalked = 0;
-  let glimpse = { shown: false, gone: false, since: 0 };
+  // June, glimpsed ahead at the start (if the level has a glimpse).
+  let glimpse = level.june.glimpse ? { shown: false, gone: false, since: 0 } : { shown: true, gone: true, since: 0 };
+  // A storm outside the windows (if the level has one): the house's lightning rules.
+  let strike = null, strikeAt = 0, nextStrikeAt = performance.now() + 6000;
   let bob = 0;
   let enteredAt = performance.now();
 
@@ -211,7 +218,7 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
       if (part.oneWay && part.target === 1) return;
       part.target = part.target > 0.5 ? 0 : 1;
       audio.furniture(part.kind);
-      if (part.id === 'shutter' && part.target === 1) hud.say(level.lines.shutterOpen, 4000);
+      if (part.openLine && part.target === 1) hud.say(part.openLine, 4000);
       return;
     }
     const item = itemById.get(target);
@@ -248,7 +255,7 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
   function goHide(hide) {
     const seen = presence.kind === 'hunt' && sees(presence, playerInfo(false), canSee, performance.now());
     mode = { kind: 'hidden', hide, seen, yaw: 0, pitch: 0 };
-    hud.setHiding(true);
+    hud.setHiding(true, hide.overlay);
     hud.setPrompt(hide.low ? 'come out from under the table' : 'come out');
     audio.knock({ freq: 300, q: 0.7, gain: 0.05, length: 0.3, rate: 0.5 });
   }
@@ -421,7 +428,7 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
 
     // Moving parts
     for (const p of partById.values()) {
-      const rate = p.kind === 'shutter' ? 0.55 : 2.6;
+      const rate = p.rate ?? (p.kind === 'shutter' ? 0.55 : 2.6);
       if (p.open !== p.target) {
         const d = Math.sign(p.target - p.open) * rate * sec;
         p.open = Math.abs(p.target - p.open) <= Math.abs(d) ? p.target : p.open + d;
@@ -436,7 +443,8 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
       glimpse = { ...glimpse, shown: true, since: now };
       hud.say(level.lines.glimpse, 3500);
     }
-    if (glimpse.shown && !glimpse.gone && (walker.pos[1] < level.june.glimpse.pos[1] + 7 || now - glimpse.since > 12000)) {
+    const gp = level.june.glimpse?.pos;
+    if (glimpse.shown && !glimpse.gone && (Math.hypot(walker.pos[0] - gp[0], walker.pos[1] - gp[1]) < 7 || now - glimpse.since > 12000)) {
       glimpse = { ...glimpse, gone: true };
     }
 
@@ -474,9 +482,9 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
       hud.say(level.lines.caught, 3000);
     }
 
-    // The end: past the shutter, close to June.
-    const shutter = partById.get('shutter');
-    if (mode.kind === 'walk' && shutter && shutter.open > 0.95) {
+    // The end: past the last door, close to June.
+    const exitPart = partById.get(level.exitPart);
+    if (mode.kind === 'walk' && exitPart && exitPart.open > 0.95) {
       const t = level.exitTrigger;
       if (Math.hypot(walker.pos[0] - t.pos[0], walker.pos[1] - t.pos[1]) < t.radius) {
         mode = { kind: 'ending', start: now, shown: -1 };
@@ -571,7 +579,7 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
       list.push(presenceMesh);
     }
     const juneAt = glimpse.shown && !glimpse.gone ? level.june.glimpse.pos : level.june.pos;
-    juneMesh.model = multiply(translation([juneAt[0], 0, juneAt[1]]), rotationY(-(glimpse.gone ? level.june.yaw : 0)));
+    juneMesh.model = multiply(translation([juneAt[0], 0, juneAt[1]]), multiply(rotationY(-(glimpse.gone ? level.june.yaw : (level.june.glimpse?.yaw ?? 0))), scaling(juneScale)));
     juneMesh.highlight = 0;
     if (glimpse.gone || glimpse.shown) list.push(juneMesh);
 
@@ -586,16 +594,34 @@ export function createMemoryScene({ r, audio, hud, stage, level, progress: saved
       range: 15,
     } : null;
 
+    // Lightning through the windows.
+    let flash = 0;
+    if (level.storm) {
+      if (now >= nextStrikeAt && !frozen) {
+        strike = createStrike(Math.random, reduce);
+        strikeAt = now;
+        audio.thunder(strike.thunderDelay);
+        nextStrikeAt = now + strikeLength(strike) + nextStrikeDelay(Math.random);
+      }
+      flash = strike ? flashIntensity(strike, now - strikeAt) * (level.flashScale ?? 0.6) : 0;
+    }
+    let lights = lightsNear(eye, now);
+    if (level.presenceLamp && presenceShown) {
+      // Its lamp is always one of the lights, so you see it coming down the corridor.
+      const lamp = { pos: [presence.pos[0] + 0.3, 0.85, presence.pos[1]], color: [1, 0.8, 0.5], intensity: 1.3, range: 7 };
+      lights = [lamp, ...lights.slice(0, 2)];
+    }
+
     r.drawScene(list, {
       viewProj,
       camPos: eye,
       time,
       ambient: s.clearPicture ? level.ambient.map((a) => a * 1.6) : level.ambient,
-      lights: lightsNear(eye, now),
-      flash: 0,
-      flashDir: [0, 1, 0],
-      flashColor: [1, 1, 1],
-      sky: [0.1, 0.1, 0.14],
+      lights,
+      flash,
+      flashDir: level.flashDir ?? [0, 1, 0],
+      flashColor: [0.85, 0.9, 1],
+      sky: level.sky ?? [0.1, 0.1, 0.14],
       fogColor: level.fog.color,
       fogNear: level.fog.near,
       fogFar: level.fog.far,

@@ -20,5 +20,6 @@
   - _Requirements: 1.1, 1.3, 1.4, 1.5, 5.6, 7.3_
 - [ ] 8. Check touch controls on a real phone (the test browser has no touch screen)
   - _Requirements: 2.2_
-- [ ] 9. The school at night (second memory)
+- [x] 9. The school at night (second memory)
+  - _Requirements: 8_
 - [ ] 10. The dive into the pond (third memory, the ending)

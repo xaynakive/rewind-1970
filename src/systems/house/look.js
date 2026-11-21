@@ -35,6 +35,11 @@ export function createLook(element) {
   element.addEventListener('pointercancel', end);
 
   return {
+    /** Back to looking straight ahead (after arriving at a new viewpoint). */
+    reset() {
+      target.yaw = target.pitch = current.yaw = current.pitch = 0;
+      drag = null;
+    },
     /** Eases toward the target. Returns the current offsets in radians. */
     update(dt, reducedMotion) {
       const k = reducedMotion ? 1 : 1 - Math.exp(-dt * 0.004);

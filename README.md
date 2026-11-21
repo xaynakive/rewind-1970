@@ -8,21 +8,27 @@ The tape opens on a date that shouldn't exist: **October 31, 1970, 00:00**, year
 
 Spooky, never gore. Your memories never leave your device.
 
-## Status: milestone 2
+## Status: milestone 3
 
 Working now:
 - Cold open: a found-tape boot screen in a pixel VCR font, with tracking lines, colour bleed and grain.
-- The living room in a low-poly PS1 style: wobbling vertices, a 320×240 render, dithering, fog, a flickering CRT and candle-lit pumpkins.
-- A storm outside: lightning through the window and synthesized thunder, rain and tape hiss.
+- **The whole house**, in a low-poly PS1 style (wobbling vertices, a 320×240 render, dithering, fog):
+  - the front yard in the rain: the gate, a mailbox with its flag up, three graves, a dead tree, the pond and a blood moon
+  - the hallway, with an attic hatch hanging open and stairs going up
+  - the living room, with the TV, the VCR and a flickering CRT glow
+  - the messy room, with a heap of candle-lit pumpkins and a chair turned to face the corner
+  - the bedroom upstairs, with dark space under the bed and a wardrobe hanging open
+- **Moving around.** Exit arrows (or W/A/S/D and the arrow keys) move you between viewpoints. Inside a room the camera glides; between rooms the tape skips.
+- A storm outside: falling rain, lightning, and synthesized thunder, rain and tape hiss. The rain gets quieter when you go inside.
 - Recording tapes at the VCR. Each tape is stored in IndexedDB and hidden at one of 10 spots, with a quiet hint about where it went.
 - **Finding tapes.** Cassettes sit in piles at their hiding spots. Their spine labels yellow and then bleed red as they decay, so you can see which ones need you.
 - **Decay.** A neglected tape plays back damaged: colours bleed, static rises, the tracking jitters, and up to 1 in 5 words drift out of place. The memory itself is never changed.
 - **Rewinding.** Carry a tape to the TV and hold for 2 seconds (mouse, touch or keyboard). It plays back clean and returns to the top of its pile.
 - Settings: reduce flashing, sound, demo time (one minute counts as one day, to watch decay happen), a text-only reader for every tape, export to JSON, erase all.
 
-For now only the living room exists, so only tapes hidden in the TV cabinet can be found. Tapes hidden elsewhere will appear when their rooms are built.
+All 10 hiding spots can be reached. Carry a tape from anywhere in the house to the living-room TV to rewind it.
 
-Next: the rest of the house, the pond, and the endings. See `.kiro/specs/*/tasks.md`.
+Next: the pond (ripples and what's beneath it), the endings, and polish. See `.kiro/specs/*/tasks.md`.
 
 ## Run locally
 

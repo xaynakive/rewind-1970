@@ -14,11 +14,11 @@
 - [x] 4. Tape writer overlay
   - The VCR hotspot opens the writer; submitting creates, stores and hides the tape, then shows a hint once the write succeeds.
   - _Requirements: 1.1, 2.4_
-- [ ] 5. Find and read
+- [x] 5. Find and read
   - [x] Cassette meshes at hiding spots in loaded areas, one hotspot per pile that picks up the top tape.
   - [x] Picking up marks the tape found and plays it with its current decay.
   - [x] Piles: swapping slides the held tape under its pile; unit tests.
-  - [ ] Hiding spots outside the living room (needs the other house areas).
+  - [x] All 10 hiding spots, across the five areas. A carried tape can be taken from room to room to the TV.
   - _Requirements: 2.5, 2.6, 3.1, 3.2, 3.3, 3.4_
 - [x] 6. Hold-to-rewind on the TV
   - Rewind state machine with unit tests; mouse, touch and keyboard holds; whirr sound and `◀◀ REW` progress on the OSD; clean playback; the tape goes back on top of its pile.

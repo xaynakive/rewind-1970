@@ -10,23 +10,26 @@ rewind-1970/
 │   ├── steering/        # product, art style, tech, structure rules
 │   ├── specs/           # one folder per system: requirements, design, tasks
 │   └── hooks/           # agent hooks that keep code consistent with specs (planned)
-├── index.html           # stage, dialogs (tape writer, settings)
+├── index.html           # stage, dialogs (tape writer, settings, playback)
 ├── style.css
 ├── package.json         # scripts only: test, serve. No dependencies.
+├── LICENSE              # MIT
 ├── src/
-│   ├── main.js          # boot and wiring: cold open -> house, tapes, settings
-│   ├── core/            # settings (and later: shared state, event bus)
+│   ├── main.js          # boot and wiring: cold open -> house, moving, tapes, rewind, settings
+│   ├── core/            # settings, hashing / seeded random
 │   ├── render/          # renderer, shaders, mesh builder, matrix math, bitmap font
 │   ├── systems/
 │   │   ├── cold-open/
-│   │   ├── house/       # areas, look controls, hotspots, lightning
-│   │   ├── tapes/       # tape model, placement, hints
-│   │   ├── decay/       # decay curve and stages
+│   │   ├── house/       # areas.js + one module per area, palette, navigation graph and moves,
+│   │   │                #   area loader, look controls, hotspots, lightning
+│   │   ├── tapes/       # tape model, placement, hints, cassette meshes and piles, rewind
+│   │   ├── decay/       # decay curve and stages, word drift
 │   │   ├── pond/        # (planned)
 │   │   └── endings/     # (planned)
 │   ├── storage/         # IndexedDB access
-│   ├── audio/           # Web Audio synth: hiss, rain, thunder, tape motor
-│   └── ui/              # DOM overlays: tape writer, settings + text-only reader, hints
+│   ├── audio/           # Web Audio synth: hiss, rain, thunder, tape motor, rewind whirr
+│   └── ui/              # DOM overlays: tape writer, playback, settings + text-only reader,
+│                        #   exit arrows, hints
 ├── tests/               # node:test unit tests for pure logic
 └── docs/
     └── writeup.md       # hackathon write-up (planned)

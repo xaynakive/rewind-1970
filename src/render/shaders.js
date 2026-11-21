@@ -20,12 +20,20 @@ uniform vec3 uFlashColor;
 uniform vec3 uSky;
 uniform vec3 uCamPos;
 uniform vec2 uFog;
+uniform float uTime;
 
 varying vec3 vColor;
 varying float vFog;
 
+// aEmissive codes: 0..1 lit -> self-lit, 2 sky (windows), 3 rain, 4 unfogged self-lit (moon).
 void main() {
-  vec4 clip = uViewProj * vec4(aPos, 1.0);
+  vec3 p = aPos;
+  bool rain = aEmissive > 2.5 && aEmissive < 3.5;
+  if (rain) {
+    // Each streak keeps its own phase in aNormal.x and falls through an 8 m column.
+    p.y = mod(aNormal.x - uTime * 9.0, 8.0) + aPos.y;
+  }
+  vec4 clip = uViewProj * vec4(p, 1.0);
   if (clip.w > 0.0) {
     vec2 grid = uSnapRes * 0.5;
     vec2 ndc = clip.xy / clip.w;
@@ -34,6 +42,16 @@ void main() {
   }
   gl_Position = clip;
 
+  if (rain) {
+    vColor = aColor * (0.3 + 1.2 * uFlash);
+    vFog = clamp((distance(p, uCamPos) - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0);
+    return;
+  }
+  if (aEmissive > 3.5) {
+    vColor = aColor;
+    vFog = 0.0;
+    return;
+  }
   if (aEmissive > 1.5) {
     vColor = mix(uSky, uFlashColor, uFlash);
     vFog = 0.0;

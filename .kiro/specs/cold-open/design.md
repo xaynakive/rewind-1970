@@ -29,5 +29,5 @@ Characters type at 26 ms each. Lines pause 380–900 ms.
 ## Audio
 PLAY is the first user gesture, so the Web Audio context is created here. The tape-start sound is a synthesized click and motor whine. Rain and tape hiss loops start at the same time.
 
-## Milestone note
-Until the front yard exists, PLAY leads to the living room. Requirement 1.4 ("move to the front yard") is met when the house spec's front yard is built.
+## After PLAY
+The house opens at the `yard-gate` viewpoint in the front yard, in the rain. On a first visit with no tapes, a hint points inside: "the porch light is on. somewhere inside, a vcr is waiting."

@@ -14,10 +14,11 @@ The house is the interface. The user moves between viewpoints in and around a da
 
 #### Acceptance criteria
 1. The system SHALL let the user move between connected viewpoints with a smooth camera move of 0.6 to 1.2 seconds.
-2. On desktop, the system SHALL support clicking a highlighted destination, and W/A/S/D or the arrow keys to move to the viewpoint in that direction.
-3. On touch devices, the system SHALL support tapping a destination, and swiping to look around within a limited angle.
+2. On desktop, the system SHALL support clicking an exit arrow labelled with its destination, and W/A/S/D or the arrow keys to move to the viewpoint in that direction.
+3. On touch devices, the system SHALL support tapping an exit arrow, and dragging to look around within a limited angle. Exit arrows SHALL NOT cover the picture on portrait screens.
 4. WHILE a camera move is in progress THEN the system SHALL ignore new move input.
 5. The system SHALL allow mouse or touch look within ±35° horizontally and ±20° vertically at each viewpoint.
+6. WHEN moving between areas THEN the system SHALL show the move as a tape skip (a VHS glitch cut), or a dip to black while reduce flashing is on.
 
 ### Requirement 2: Areas
 #### Acceptance criteria

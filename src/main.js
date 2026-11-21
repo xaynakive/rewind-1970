@@ -3,7 +3,8 @@
 // their hiding spots, and rewound on the TV.
 
 import { createRenderer } from './render/renderer.js';
-import { perspective, lookAt, multiply } from './render/math.js';
+import { perspective, lookAt, multiply, pickPlaneY } from './render/math.js';
+import { createPond, addRipple, rippleUniforms, revealAt, tickPond, noteLightning } from './systems/pond/pond.js';
 import { drawText } from './render/bitmapFont.js';
 import { createColdOpen } from './systems/cold-open/coldOpen.js';
 import { buildHouse } from './systems/house/areas.js';
@@ -39,6 +40,7 @@ const audio = createAudio();
 const hint = createHint($('#hint'));
 const store = await openTapeStore();
 let tapes = await store.all();
+const pondNoticedBefore = Boolean(await store.getMeta('pondSecretNoticed').catch(() => false));
 
 // ---------- tapes ----------
 
@@ -131,8 +133,52 @@ function start(r) {
   /** Area whose geometry is on screen. Changes mid-move on a cut. */
   let shownArea = view.area;
   let lastLookAt = null;
+  let lastViewProj = null;
   const visited = new Set();
   const areaOf = (id) => house.areas.get(id);
+
+  // ----- the pond -----
+
+  const pondInfo = areaOf('front-yard').pond;
+  const pond = createPond({ skeleton: pondInfo.skeleton });
+  pond.noticed = pondNoticedBefore;
+  /** 0 = tapes resting on the bottom, 1 = floating at the surface. Resets on leaving the yard. */
+  let pondRise = 0;
+  const watchingPond = () => view.id === pondInfo.viewpoint && !move && !anyDialogOpen();
+
+  function ripple(x, z) {
+    addRipple(pond, x, z, performance.now(), Math.random);
+    audio.plop();
+  }
+
+  /** Touching the water: a ripple where you touched (or the middle, from the keyboard). */
+  function touchWater(e) {
+    let [x, z] = pondInfo.center;
+    if (e?.detail > 0 && lastViewProj) {
+      const rect = stage.getBoundingClientRect();
+      const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+      const ndcY = 1 - ((e.clientY - rect.top) / rect.height) * 2;
+      const hit = pickPlaneY(lastViewProj, ndcX, ndcY, pondInfo.waterY);
+      const [cx, cz] = pondInfo.center, [rx, rz] = pondInfo.radii;
+      if (hit && ((hit[0] - cx) / rx) ** 2 + ((hit[2] - cz) / rz) ** 2 <= 1) [x, z] = [hit[0], hit[2]];
+    }
+    ripple(x, z);
+  }
+
+  async function secretNoticed() {
+    pond.noticed = true;
+    try { await store.setMeta('pondSecretNoticed', true); } catch { /* remembered for this visit */ }
+    setTimeout(() => hint.show('you look away. when you look back, the water is just water.', 5000), 1200);
+  }
+
+  const easeOut = (t) => 1 - (1 - t) ** 3;
+  /** The area's hiding spots, with pond tapes lowered under the water until they float up. */
+  function spotsOf(area) {
+    if (area.id !== 'front-yard' || !area.spots.pond) return area.spots;
+    const p = area.spots.pond;
+    return { ...area.spots, pond: { ...p, pos: [p.pos[0], p.pos[1] - 0.35 * (1 - easeOut(pondRise)), p.pos[2]] } };
+  }
+  const pondTapesWaiting = () => shownArea === 'front-yard' && pondRise < 1 && tapes.some((t) => t.spot === 'pond' && t.id !== carrying);
 
   /** Id of the tape in the player's hands, or null. Not saved: a reload puts it back. */
   let carrying = null;
@@ -149,10 +195,12 @@ function start(r) {
   function rebuildTapes() {
     const area = areaOf(shownArea);
     const visible = tapes.filter((t) => t.id !== carrying);
-    const built = buildTapeMeshes(visible, area.spots, levelOf);
+    const built = buildTapeMeshes(visible, spotsOf(area), levelOf);
     if (tapeMesh) r.disposeMesh(tapeMesh);
     tapeMesh = built.meshData ? r.createMesh(built.meshData) : null;
-    hotspotLayer.set([...built.hotspots, ...area.hotspots]);
+    // A tape still under the water can't be picked up yet.
+    const reachable = built.hotspots.filter((h) => h.spot !== 'pond' || pondRise >= 1);
+    hotspotLayer.set([...reachable, ...area.hotspots]);
     lastTapeBuild = performance.now();
   }
 
@@ -180,6 +228,7 @@ function start(r) {
 
   /** Called when the camera switches to a new area (on arrival, or mid-cut). */
   function showArea(areaId) {
+    if (areaId !== 'front-yard') pondRise = 0; // pond tapes sink again while you're away
     shownArea = areaId;
     loader.enter(areaId);
     audio.setRain(areaOf(areaId).outdoors ? 1 : 0.3);
@@ -258,8 +307,9 @@ function start(r) {
   });
 
   const hotspotLayer = createHotspotLayer($('#hotspots'), {
-    onSelect(id) {
+    onSelect(id, e) {
       if (id.startsWith('tape:')) return findTape(id.slice(5));
+      if (id === 'pond-water') return touchWater(e);
       if (id === 'vcr') return writer.open();
       if (id === 'tv') {
         if (carrying || performance.now() < suppressTvUntil) return; // handled by press/release
@@ -421,6 +471,8 @@ function start(r) {
         strikeAt = now;
         audio.thunder(strike.thunderDelay);
         nextStrikeAt = now + strikeLength(strike) + nextStrikeDelay(Math.random);
+        // Lightning lights up what's under the water, for anyone looking at it.
+        if (shownArea === 'front-yard' && noteLightning(pond, watchingPond())) secretNoticed();
       }
       // Camera: following a move, or standing at a viewpoint and looking around.
       let eye, target;
@@ -444,6 +496,24 @@ function start(r) {
       const proj = area.outdoors ? projOutdoors : projIndoors;
       const viewProj = multiply(proj, lookAt(eye, target));
       const flash = strike ? flashIntensity(strike, now - strikeAt) * area.flashScale : 0;
+      lastViewProj = viewProj;
+
+      // The pond: tapes float up while you watch, ripples spread, and sometimes the skeleton shows.
+      let ripples = null, reveal = 0;
+      if (shownArea === 'front-yard') {
+        if (watchingPond() && pondTapesWaiting()) {
+          pondRise = Math.min(1, pondRise + dt / 2500);
+          rebuildTapes();
+          if (pondRise >= 1) {
+            const p = area.spots.pond.pos;
+            ripple(p[0], p[2]);
+            hint.show('something rises to the surface.');
+          }
+        }
+        if (tickPond(pond, now, watchingPond())) secretNoticed();
+        ripples = rippleUniforms(pond, now);
+        reveal = revealAt(pond, now, flash);
+      }
 
       const meshes = [loader.mesh(shownArea)];
       if (tapeMesh) meshes.push(tapeMesh);
@@ -451,6 +521,9 @@ function start(r) {
         viewProj,
         camPos: eye,
         time,
+        ripples,
+        reveal,
+        water: pondInfo.water,
         ambient: area.ambient,
         lights: area.lights(now),
         flash,

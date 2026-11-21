@@ -8,7 +8,7 @@ The tape opens on a date that shouldn't exist: **October 31, 1970, 00:00**, year
 
 Spooky, never gore. Your memories never leave your device.
 
-## Status: milestone 3
+## Status: milestone 4
 
 Working now:
 - Cold open: a found-tape boot screen in a pixel VCR font, with tracking lines, colour bleed and grain.
@@ -28,7 +28,9 @@ Working now:
 
 All 10 hiding spots can be reached. Carry a tape from anywhere in the house to the living-room TV to rewind it.
 
-Next: the pond (ripples and what's beneath it), the endings, and polish. See `.kiro/specs/*/tasks.md`.
+- **The pond.** Touch the still water and ripples spread through the moon's reflection. Tapes hidden in the pond float up while you watch. And sometimes, when lightning strikes or the ripples settle, you see what's lying beneath the surface.
+
+Next: the endings, and polish. See `.kiro/specs/*/tasks.md`.
 
 ## Run locally
 

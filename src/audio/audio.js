@@ -118,6 +118,23 @@ export function createAudio() {
       };
     },
 
+    /** A soft drop into still water. */
+    plop() {
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(520, t);
+      osc.frequency.exponentialRampToValueAtTime(140, t + 0.18);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.08, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+      osc.connect(g).connect(master);
+      osc.start(t);
+      osc.stop(t + 0.32);
+    },
+
     /** Mechanical clunk and motor whine when a tape starts. */
     tapeStart() {
       if (!ctx) return;

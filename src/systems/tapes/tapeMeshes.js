@@ -91,6 +91,7 @@ export function buildTapeMeshes(tapes, spots, levelOf) {
     const more = stack.length > 1 ? ` (${stack.length - 1} more under it)` : '';
     hotspots.push({
       id: `tape:${top.id}`,
+      spot: spotId,
       label: `tape: ${top.label}${more}`,
       tag: stack.length > 1 ? `tapes \u00d7${stack.length}` : 'tape',
       min: [Math.min(...corners.map((c) => c[0])), base[1] - 0.02, Math.min(...corners.map((c) => c[2]))],

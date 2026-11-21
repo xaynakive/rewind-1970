@@ -21,7 +21,7 @@ const FRONT = -8; // the house's front wall
 const CAM = {
   gate: [0, 1.75, 12.5],
   graves: [-2.0, 1.5, 2.6],
-  pond: [2.2, 1.5, 2.8],
+  pond: [3.2, 1.45, 1.4],
   porch: [0, 1.6, -4.6],
 };
 
@@ -31,6 +31,13 @@ const GRAVES = [
   { x: -5.5, z: -0.2, rot: 0.3 },
 ];
 const POND = { x: 4.2, z: -1.6, rx: 1.7, rz: 1.3 };
+const WATER_Y = 0.03;
+/** Moon reflection, relative to the pond centre. */
+const MOON_REFLECTION = [0.45, -0.55];
+/** Skeleton centre (x, z), away from the moon's reflection. */
+const SKELETON = [POND.x - 0.35, POND.z - 0.05];
+const WATER = 5;
+const BENEATH = 6;
 
 /** rotY that turns a tape pile at `pos` so its spine faces `cam`. */
 const face = (pos, cam) => Math.atan2(cam[0] - pos[0], cam[2] - pos[2]);
@@ -78,7 +85,18 @@ export function buildFrontYard() {
         exits: { forward: 'hall-entry', back: 'yard-gate' } },
     ],
     spots,
-    hotspots: [],
+    hotspots: [
+      // Touching the water makes ripples. Listed after tapes, so a tape in the pond stays on top.
+      { id: 'pond-water', label: 'the water', quiet: true, min: [POND.x - POND.rx, -0.05, POND.z - POND.rz], max: [POND.x + POND.rx, 0.12, POND.z + POND.rz] },
+    ],
+    pond: {
+      center: [POND.x, POND.z],
+      radii: [POND.rx, POND.rz],
+      waterY: WATER_Y,
+      skeleton: SKELETON,
+      water,
+      viewpoint: 'yard-pond',
+    },
     sky: PALETTE.night,
     fogColor: [0.07, 0.085, 0.12],
     fogNear: 7,
@@ -185,20 +203,95 @@ function buildTree(mb, [x, , z]) {
   mb.boxRot([x + 0.2, 3.1, z - 0.1], [0.8, 0.07, 0.07], 1.4, bark);
 }
 
-/** The pond: still, dark water with the moon in it. Returns the bank spot. */
+/**
+ * The pond: still, dark water with the moon in it, and a skeleton lying just
+ * beneath. Returns the hiding spot, a tape resting on the bottom near the edge.
+ */
 function buildPond(mb) {
   const { x, z, rx, rz } = POND;
-  const seg = 14;
-  for (let i = 0; i < seg; i++) {
-    const a0 = (i / seg) * Math.PI * 2, a1 = ((i + 1) / seg) * Math.PI * 2;
-    mb.tri([x, 0.03, z], [x + Math.cos(a1) * rx, 0.03, z + Math.sin(a1) * rz], [x + Math.cos(a0) * rx, 0.03, z + Math.sin(a0) * rz], water, 0.9);
-    const am = (a0 + a1) / 2;
+  const seg = 32, rings = 12;
+
+  // Water: rings of vertices so the ripples (moved in the shader) have somewhere to bend.
+  const moon = [x + MOON_REFLECTION[0], z + MOON_REFLECTION[1]];
+  const at = (ring, i) => {
+    const a = (i / seg) * Math.PI * 2, k = ring / rings;
+    const px = x + Math.cos(a) * rx * k, pz = z + Math.sin(a) * rz * k;
+    const glow = Math.max(0, 1 - Math.hypot((px - moon[0]) / 0.5, (pz - moon[1]) / 0.32));
+    return { p: [px, WATER_Y, pz], c: mix(water, shade(PALETTE.bloodMoon, 1.2), glow * glow) };
+  };
+  for (let ring = 0; ring < rings; ring++) {
+    for (let i = 0; i < seg; i++) {
+      const a = at(ring, i), b = at(ring, i + 1), c = at(ring + 1, i + 1), d = at(ring + 1, i);
+      if (ring > 0) pushTri(mb, a, c, b, WATER);
+      pushTri(mb, a, d, c, WATER);
+    }
+  }
+
+  // Stones around the edge.
+  for (let i = 0; i < 14; i++) {
+    const am = ((i + 0.5) / 14) * Math.PI * 2;
     mb.boxRot([x + Math.cos(am) * (rx + 0.12), 0.07, z + Math.sin(am) * (rz + 0.12)], [0.36, 0.14, 0.22], -am, stone);
   }
-  // The moon's reflection, 1 cm above the water.
-  disc(mb, [x + 0.35, 0.04, z - 0.45], 0.28, 10, shade(PALETTE.bloodMoon, 0.9), GLOW, true);
-  const pos = [x - 0.6, 0.01, z + rz + 0.45];
+
+  buildSkeleton(mb);
+
+  const pos = [x - 0.55, WATER_Y + 0.01, z + 0.7];
   return { pos, rotY: face(pos, CAM.pond), maxStack: 3 };
+}
+
+/**
+ * A skeleton lying on its back under the water, drawn as flat pieces 1.5 cm
+ * above the surface with emissive code BENEATH: it looks exactly like water
+ * until the shader's reveal brings the bone colour through.
+ */
+function buildSkeleton(mb) {
+  const [sx, sz] = SKELETON;
+  const y = WATER_Y + 0.015;
+  const angle = 0.55; // lying across the pond, head toward the far bank
+  const S = 1.25;     // a little larger than life, so the bones read at 320x240
+  const bone = [0.66, 0.64, 0.58];
+  const dark = [0.08, 0.09, 0.12];
+  // Local (along, across) -> world.
+  const w = (u, v) => [sx + (Math.sin(angle) * u + Math.cos(angle) * v) * S, y, sz + (-Math.cos(angle) * u + Math.sin(angle) * v) * S];
+  const piece = (u, v, len, wid, turn = 0, color = bone) => {
+    const c = Math.cos(turn), s = Math.sin(turn);
+    const q = [[-wid, -len], [wid, -len], [wid, len], [-wid, len]]
+      .map(([a, b]) => w(u + b * c - a * s, v + b * s + a * c));
+    pushQuad(mb, q, color, BENEATH);
+  };
+
+  // Skull and eye sockets.
+  const skull = [];
+  for (let i = 0; i < 8; i++) {
+    const a = (i / 8) * Math.PI * 2;
+    skull.push(w(0.62 + Math.cos(a) * 0.13, Math.sin(a) * 0.1));
+  }
+  for (let i = 0; i < 8; i++) pushTri(mb, { p: w(0.62, 0), c: bone }, { p: skull[i], c: bone }, { p: skull[(i + 1) % 8], c: bone }, BENEATH);
+  piece(0.65, -0.04, 0.025, 0.025, 0, dark);
+  piece(0.65, 0.04, 0.025, 0.025, 0, dark);
+
+  piece(0.18, 0, 0.3, 0.03);                                 // spine
+  for (let i = 0; i < 4; i++) {                              // ribs
+    const u = 0.38 - i * 0.075;
+    piece(u, -0.1, 0.02, 0.09, -0.35);
+    piece(u, 0.1, 0.02, 0.09, 0.35);
+  }
+  piece(-0.14, 0, 0.06, 0.13);                               // pelvis
+  piece(0.22, -0.22, 0.17, 0.024, 0.25);                     // arms
+  piece(0.24, 0.22, 0.17, 0.024, -0.15);
+  piece(-0.38, -0.08, 0.2, 0.03, 0.06);                      // legs
+  piece(-0.4, 0.09, 0.2, 0.03, -0.12);
+}
+
+function pushTri(mb, a, b, c, emissive) {
+  for (const v of [a, b, c]) mb.data.push(v.p[0], v.p[1], v.p[2], 0, 1, 0, v.c[0], v.c[1], v.c[2], emissive);
+  mb.triangles++;
+}
+
+function pushQuad(mb, q, color, emissive) {
+  const v = q.map((p) => ({ p, c: color }));
+  pushTri(mb, v[0], v[1], v[2], emissive);
+  pushTri(mb, v[0], v[2], v[3], emissive);
 }
 
 /** Flat disc: upright (facing +z) or lying flat. */

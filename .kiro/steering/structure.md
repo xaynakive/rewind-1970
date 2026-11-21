@@ -24,7 +24,7 @@ rewind-1970/
 │   │   │                #   area loader, look controls, hotspots, lightning
 │   │   ├── tapes/       # tape model, placement, hints, cassette meshes and piles, rewind
 │   │   ├── decay/       # decay curve and stages, word drift
-│   │   ├── pond/        # (planned)
+│   │   ├── pond/        # ripples, glimpses of the skeleton, noticing the secret
 │   │   └── endings/     # (planned)
 │   ├── storage/         # IndexedDB access
 │   ├── audio/           # Web Audio synth: hiss, rain, thunder, tape motor, rewind whirr

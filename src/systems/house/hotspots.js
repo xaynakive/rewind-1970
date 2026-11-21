@@ -29,7 +29,7 @@ export function createHotspotLayer(container, { onSelect, onPress, onRelease }) 
     const press = () => { if (!pressed) { pressed = true; onPress?.(h.id); } };
     const release = () => { if (pressed) { pressed = false; onRelease?.(h.id); } };
 
-    button.addEventListener('click', () => onSelect(h.id));
+    button.addEventListener('click', (e) => onSelect(h.id, e));
     button.addEventListener('pointerdown', (e) => {
       if (e.button !== 0) return;
       // Keep the pointer on this button while held, and don't start a look-drag.
@@ -66,6 +66,8 @@ export function createHotspotLayer(container, { onSelect, onPress, onRelease }) 
         item.corners = corners(h.min, h.max);
         item.button.setAttribute('aria-label', h.label);
         item.tag.textContent = h.tag ?? h.label;
+        // Quiet hotspots (the water) show no box or label on hover; keyboard focus still shows.
+        item.button.classList.toggle('quiet', Boolean(h.quiet));
         item.button.style.zIndex = String(list.length - i);
         items.set(h.id, item);
       });

@@ -21,17 +21,41 @@ uniform vec3 uSky;
 uniform vec3 uCamPos;
 uniform vec2 uFog;
 uniform float uTime;
+uniform vec3 uRipples[8];   // (x, z, age in seconds); age < 0 = empty
+uniform float uReveal;      // how much of what's beneath the water shows (0..1)
+uniform vec3 uWater;        // plain water colour, shared by the water and what's beneath it
 
 varying vec3 vColor;
 varying float vFog;
 
-// aEmissive codes: 0..1 lit -> self-lit, 2 sky (windows), 3 rain, 4 unfogged self-lit (moon).
+float rippleHeight(vec2 xz) {
+  float h = 0.0;
+  for (int i = 0; i < 8; i++) {
+    vec3 r = uRipples[i];
+    if (r.z < 0.0 || r.z > 3.0) continue;
+    float x = distance(xz, r.xy) - r.z * 0.8;
+    // Wavelength ~0.7 m, wide enough for the water grid's vertices to catch.
+    float env = exp(-x * x * 3.0) * exp(-r.z * 0.9) * smoothstep(0.0, 0.25, r.z);
+    h += 0.04 * env * sin(x * 9.0);
+  }
+  return h;
+}
+
+// aEmissive codes: 0..1 lit -> self-lit, 2 sky (windows), 3 rain, 4 unfogged self-lit (moon),
+// 5 water (rippled, not lit), 6 beneath the water (looks exactly like water until uReveal > 0).
 void main() {
   vec3 p = aPos;
   bool rain = aEmissive > 2.5 && aEmissive < 3.5;
+  bool water = aEmissive > 4.5 && aEmissive < 5.5;
+  bool beneath = aEmissive > 5.5;
+  float h = 0.0;
   if (rain) {
     // Each streak keeps its own phase in aNormal.x and falls through an 8 m column.
     p.y = mod(aNormal.x - uTime * 9.0, 8.0) + aPos.y;
+  }
+  if (water || beneath) {
+    h = rippleHeight(p.xz);
+    p.y += h;
   }
   vec4 clip = uViewProj * vec4(p, 1.0);
   if (clip.w > 0.0) {
@@ -44,6 +68,16 @@ void main() {
 
   if (rain) {
     vColor = aColor * (0.3 + 1.2 * uFlash);
+    vFog = clamp((distance(p, uCamPos) - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0);
+    return;
+  }
+  if (water || beneath) {
+    vec3 base = beneath ? uWater : aColor;
+    // Crests catch the sky and the moon; troughs go darker.
+    vec3 c = base * (1.0 + h * 20.0) + vec3(0.3, 0.2, 0.24) * max(h, 0.0) * 14.0;
+    c = mix(c, uFlashColor * 0.35, uFlash * 0.5);
+    if (beneath) c = mix(c, aColor, clamp(uReveal, 0.0, 1.0) * 0.9);
+    vColor = c;
     vFog = clamp((distance(p, uCamPos) - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0);
     return;
   }

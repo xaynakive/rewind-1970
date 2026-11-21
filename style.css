@@ -83,6 +83,9 @@ body {
 }
 .hotspot:hover .hotspot-label,
 .hotspot:focus-visible .hotspot-label { opacity: 1; }
+.hotspot.quiet:hover { border-color: transparent; }
+.hotspot.quiet:hover .hotspot-label { opacity: 0; }
+.hotspot.quiet { cursor: crosshair; }
 
 /* ---------- exits ---------- */
 

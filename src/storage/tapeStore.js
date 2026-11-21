@@ -32,8 +32,11 @@ function openDb() {
 /** In-memory fallback when IndexedDB is unavailable (some private modes). */
 function memoryStore() {
   const tapes = new Map();
+  const meta = new Map();
   return {
     persistent: false,
+    async getMeta(key) { return meta.get(key); },
+    async setMeta(key, value) { meta.set(key, value); },
     async all() { return [...tapes.values()]; },
     async put(tape) { tapes.set(tape.id, structuredClone(tape)); },
     async clear() { tapes.clear(); },
@@ -50,6 +53,15 @@ export async function openTapeStore() {
   }
   return {
     persistent: true,
+    /** Small game facts (never memory text), e.g. whether the pond's secret was noticed. */
+    async getMeta(key) {
+      return request(db.transaction('meta').objectStore('meta').get(key));
+    },
+    async setMeta(key, value) {
+      const tx = db.transaction('meta', 'readwrite');
+      tx.objectStore('meta').put(value, key);
+      await done(tx);
+    },
     async all() {
       const tapes = await request(db.transaction('tapes').objectStore('tapes').getAll());
       return tapes.sort((a, b) => a.createdAt - b.createdAt);

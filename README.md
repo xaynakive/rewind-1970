@@ -2,7 +2,7 @@
 
 > a haunted journal. your memories become VHS tapes hidden around a dark house, and you have to find and rewind them before they decay.
 
-A Kiroween entry (Costume Contest), and a strange room inside Elsewhere.
+A Kiroween entry (Costume Contest), and a strange room inside [Elsewhere](https://xaynakive.com).
 
 The tape opens on a date that shouldn't exist: **October 31, 1970, 00:00**, years before VHS was invented. Press play and you're inside the house. Write a memory into the VCR and it becomes a tape, hidden somewhere you'll have to go looking for it. Tapes you neglect slowly decay. Rewinding them on the living-room TV brings them back.
 
@@ -29,6 +29,7 @@ Next: the rest of the house, the pond, and the endings. See `.kiro/specs/*/tasks
 ES modules don't load from `file://`, so serve the folder:
 
 ```bash
+git clone https://github.com/xaynakive/rewind-1970.git
 cd rewind-1970
 npm run serve        # python3 -m http.server 8000
 # open http://localhost:8000
@@ -61,3 +62,7 @@ This project is spec-first. Everything in `.kiro/` is part of the entry:
 - **Reduce flashing** replaces lightning flashes and glitches with slow fades no brighter than 50%. It is on by default when the system prefers reduced motion.
 - Every object you can select is a real button: it works with a mouse, touch, the keyboard, and screen readers.
 - The boot text is announced to screen readers. The text-only reader shows every memory without visual effects.
+
+## License
+
+[MIT](LICENSE) © 2026 xaynakive

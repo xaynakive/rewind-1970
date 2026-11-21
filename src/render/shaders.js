@@ -9,6 +9,8 @@ attribute vec3 aColor;
 attribute float aEmissive;
 
 uniform mat4 uViewProj;
+uniform mat4 uModel;        // per mesh: moving parts (drawers, doors, the presence). Rigid only.
+uniform float uHighlight;   // per mesh: lifts the colour of something the user can use
 uniform vec2 uSnapRes;
 uniform vec3 uAmbient;
 uniform vec3 uLightPos[3];
@@ -24,9 +26,16 @@ uniform float uTime;
 uniform vec3 uRipples[8];   // (x, z, age in seconds); age < 0 = empty
 uniform float uReveal;      // how much of what's beneath the water shows (0..1)
 uniform vec3 uWater;        // plain water colour, shared by the water and what's beneath it
+uniform vec3 uSpotPos;      // the flashlight (memories): position, direction, colour (0 = off)
+uniform vec3 uSpotDir;
+uniform vec3 uSpotColor;
+uniform vec3 uSpotShape;    // cos(inner), cos(outer), range
 
 varying vec3 vColor;
 varying float vFog;
+varying vec3 vNormal;       // world normal and view vector, for the glossy material
+varying vec3 vView;
+varying float vGloss;
 
 float rippleHeight(vec2 xz) {
   float h = 0.0;
@@ -42,12 +51,17 @@ float rippleHeight(vec2 xz) {
 }
 
 // aEmissive codes: 0..1 lit -> self-lit, 2 sky (windows), 3 rain, 4 unfogged self-lit (moon),
-// 5 water (rippled, not lit), 6 beneath the water (looks exactly like water until uReveal > 0).
+// 5 water (rippled, not lit), 6 beneath the water (looks exactly like water until uReveal > 0),
+// 7 glossy (lit, plus a studio reflection in the fragment shader: the inspect view).
 void main() {
   vec3 p = aPos;
+  vGloss = 0.0;
+  vNormal = aNormal;
+  vView = vec3(0.0, 0.0, 1.0);
   bool rain = aEmissive > 2.5 && aEmissive < 3.5;
   bool water = aEmissive > 4.5 && aEmissive < 5.5;
-  bool beneath = aEmissive > 5.5;
+  bool beneath = aEmissive > 5.5 && aEmissive < 6.5;
+  bool gloss = aEmissive > 6.5;
   float h = 0.0;
   if (rain) {
     // Each streak keeps its own phase in aNormal.x and falls through an 8 m column.
@@ -57,6 +71,7 @@ void main() {
     h = rippleHeight(p.xz);
     p.y += h;
   }
+  p = (uModel * vec4(p, 1.0)).xyz;
   vec4 clip = uViewProj * vec4(p, 1.0);
   if (clip.w > 0.0) {
     vec2 grid = uSnapRes * 0.5;
@@ -92,17 +107,31 @@ void main() {
     return;
   }
 
+  vec3 n = normalize(mat3(uModel) * aNormal);
   vec3 light = uAmbient;
   for (int i = 0; i < 3; i++) {
-    vec3 d = uLightPos[i] - aPos;
+    vec3 d = uLightPos[i] - p;
     float dist = max(length(d), 0.0001);
     float att = clamp(1.0 - dist / uLightRange[i], 0.0, 1.0);
-    light += uLightColor[i] * att * att * (0.35 + 0.65 * abs(dot(aNormal, d / dist)));
+    light += uLightColor[i] * att * att * (0.35 + 0.65 * abs(dot(n, d / dist)));
   }
-  light += uFlashColor * uFlash * (0.2 + 0.6 * abs(dot(aNormal, uFlashDir)));
+  light += uFlashColor * uFlash * (0.2 + 0.6 * abs(dot(n, uFlashDir)));
+  // Flashlight: a soft-edged cone. Surfaces are subdivided so the vertices can catch it.
+  vec3 sd = p - uSpotPos;
+  float sdist = max(length(sd), 0.0001);
+  float cone = smoothstep(uSpotShape.y, uSpotShape.x, dot(sd / sdist, uSpotDir));
+  float satt = clamp(1.0 - sdist / max(uSpotShape.z, 0.0001), 0.0, 1.0);
+  float near = 0.45 + 0.55 * smoothstep(0.3, 1.8, sdist); // no blown-out close-ups
+  light += uSpotColor * cone * satt * near * (0.4 + 0.6 * abs(dot(n, sd / sdist)));
 
-  vColor = mix(aColor * light, aColor, clamp(aEmissive, 0.0, 1.0));
-  vFog = clamp((distance(aPos, uCamPos) - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0);
+  float self = gloss ? 0.0 : clamp(aEmissive, 0.0, 1.0);
+  vColor = mix(aColor * light, aColor, self) + aColor * uHighlight;
+  vFog = clamp((distance(p, uCamPos) - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0);
+  if (gloss) {
+    vGloss = 1.0;
+    vNormal = n;
+    vView = p - uCamPos;
+  }
 }
 `;
 
@@ -115,8 +144,23 @@ export const sceneFragment = `
 precision mediump float;
 varying vec3 vColor;
 varying float vFog;
+varying vec3 vNormal;
+varying vec3 vView;
+varying float vGloss;
 uniform vec3 uFogColor;
 uniform float uGamma;
+uniform float uSweep;       // the inspect view's moving light, in radians
+
+/** A dark studio around the object: a soft floor glow, a cool sky, and one bright strip light that sweeps. */
+vec3 studio(vec3 r) {
+  vec3 floorCol = vec3(0.05, 0.04, 0.05);
+  vec3 skyCol = vec3(0.16, 0.2, 0.26);
+  vec3 c = mix(floorCol, skyCol, smoothstep(-0.3, 0.7, r.y));
+  float along = r.x * cos(uSweep) + r.z * sin(uSweep);
+  c += vec3(1.0, 0.92, 0.82) * exp(-along * along * 30.0) * smoothstep(-0.1, 0.5, r.y) * 1.3;
+  c += vec3(0.9, 0.35, 0.2) * exp(-(r.y + 0.15) * (r.y + 0.15) * 40.0) * 0.25; // warm horizon line
+  return c;
+}
 
 float bayer2(vec2 a) { return mod(2.0 * a.x + 3.0 * a.y, 4.0); }
 float bayer4(vec2 p) {
@@ -125,7 +169,13 @@ float bayer4(vec2 p) {
 }
 
 void main() {
-  vec3 col = max(mix(vColor, uFogColor, vFog), vec3(0.0));
+  vec3 base = vColor;
+  if (vGloss > 0.5) {
+    vec3 r = reflect(normalize(vView), normalize(vNormal));
+    float fres = 0.25 + 0.75 * pow(1.0 - abs(dot(normalize(-vView), normalize(vNormal))), 3.0);
+    base += studio(r) * fres;
+  }
+  vec3 col = max(mix(base, uFogColor, vFog), vec3(0.0));
   // Bright light can push a channel past 1. Scale the whole colour down
   // instead of clipping each channel, so lit orange stays orange (not yellow-green).
   col /= max(1.0, max(col.r, max(col.g, col.b)));

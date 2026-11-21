@@ -23,6 +23,7 @@ export function createSettingsPanel(dialog, {
   const demo = dialog.querySelector('[name="demoTime"]');
   const brightness = dialog.querySelector('[name="brightness"]');
   const clear = dialog.querySelector('[name="clearPicture"]');
+  const story = dialog.querySelector('[name="storyMode"]');
   const list = dialog.querySelector('.reader-list');
   const houseList = dialog.querySelector('.house-list');
   const houseHeading = dialog.querySelector('.house-heading');
@@ -35,6 +36,7 @@ export function createSettingsPanel(dialog, {
   reduce.addEventListener('change', () => onChange({ ...settings, reduceFlashing: reduce.checked }));
   sound.addEventListener('change', () => onChange({ ...settings, sound: sound.checked }));
   demo.addEventListener('change', () => onChange({ ...settings, demoTime: demo.checked }));
+  story.addEventListener('change', () => onChange({ ...settings, storyMode: story.checked }));
 
   dialog.querySelector('[data-action="close"]').addEventListener('click', () => dialog.close());
   dialog.querySelector('[data-action="write"]').addEventListener('click', () => {
@@ -106,6 +108,7 @@ export function createSettingsPanel(dialog, {
       reduce.checked = settings.reduceFlashing;
       sound.checked = settings.sound;
       demo.checked = settings.demoTime;
+      story.checked = settings.storyMode;
       brightness.value = String(settings.brightness);
       clear.checked = settings.clearPicture;
       status.textContent = '';

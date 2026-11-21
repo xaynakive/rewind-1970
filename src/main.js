@@ -39,6 +39,10 @@ import { easeInOut } from './systems/house/navigation.js';
 import {
   isUnlocked, chooseEnding, buildFinalTape, finaleTimeline, segmentAt, segmentStart,
 } from './systems/endings/endings.js';
+import { buildMarket } from './systems/memory/market.js';
+import { createMemoryScene } from './systems/memory/memoryScene.js';
+import { normalizeMemories } from './systems/memory/progress.js';
+import { createMemoryHud } from './ui/memoryHud.js';
 
 const $ = (sel) => document.querySelector(sel);
 const stage = $('#stage');
@@ -63,6 +67,15 @@ async function saveMystery(next) {
   mystery = next;
   try { await store.setMeta('mystery', mystery); } catch { /* remembered for this visit */ }
 }
+// ---------- her memories, walkable (spec: .kiro/specs/memories) ----------
+
+const MEMORY_LEVELS = { market: buildMarket };
+let memories = normalizeMemories(await store.getMeta('memories').catch(() => null), Object.keys(MEMORY_LEVELS));
+async function saveMemory(id, next) {
+  memories = { ...memories, [id]: next };
+  try { await store.setMeta('memories', memories); } catch { /* remembered for this visit */ }
+}
+
 const foundHouseTapes = () => HOUSE_TAPES.filter((t) => mystery.found.includes(t.id)).map((t) => asTape(t, mystery));
 
 // ---------- tapes ----------
@@ -98,6 +111,8 @@ async function recordTape({ label, text }) {
 }
 
 const writer = createTapeWriter($('#tape-writer'), recordTape);
+/** Under a rewound house tape that can be walked into. */
+const MEMORY_NOTE = 'rewound. there is more on this tape than words. you could step inside.';
 
 /** Set by start() so solving the case can talk to the house. */
 let onCaseSolved = () => {};
@@ -475,7 +490,8 @@ function start(r) {
       level: levelOf(shown),
       rewound: false,
       reduce: settings.reduceFlashing,
-      note: shown.house && !shown.rewound ? PLAYBACK_NOTE : undefined,
+      note: shown.house && !shown.rewound ? PLAYBACK_NOTE : shown.memory ? MEMORY_NOTE : undefined,
+      enter: shown.house && shown.rewound && shown.memory ? () => enterMemory(shown.memory) : undefined,
     });
   }
 
@@ -505,11 +521,18 @@ function start(r) {
     carrying = null; // the tape goes back to its hiding spot
     audio.tapeStart();
     rebuildTapes();
-    playback.open(restored, { level: 0, rewound: true, reduce: settings.reduceFlashing });
+    playback.open(restored, {
+      level: 0,
+      rewound: true,
+      reduce: settings.reduceFlashing,
+      note: restored.memory ? MEMORY_NOTE : undefined,
+      enter: restored.memory ? () => enterMemory(restored.memory) : undefined,
+    });
   }
 
   const playback = createPlayback($('#playback'), {
-    onClose({ tapeId, rewound }) {
+    onClose({ tapeId, rewound, entering }) {
+      if (entering) return;
       if (unlockHintPending) showUnlockHint();
       else if (showPendingHouseHint()) { /* the house had something to say */ }
       else if (rewound) hint.show('the tape slips back to where you found it.');
@@ -564,6 +587,63 @@ function start(r) {
       osdKey = '';
     }
   }).observe(stage);
+
+  // ----- walking inside her tapes -----
+
+  let memoryRun = null;
+  let houseSince = 0;
+  const memoryHud = createMemoryHud($('#memory-hud'), { pause: $('#memory-pause'), notes: $('#memory-notes') }, {
+    onUse: () => memoryRun?.use(),
+    onLight: () => memoryRun?.toggleLight(),
+    onResume: () => {},
+    onLeave: () => memoryRun?.leave(),
+    onStoryMode: (on) => {
+      settings = { ...settings, storyMode: on };
+      saveSettings(settings);
+      panel.update(settings);
+    },
+  });
+
+  function enterMemory(id) {
+    const build = MEMORY_LEVELS[id];
+    if (!build || memoryRun || finale) return;
+    if (carrying) carrying = null; // the tape you held stays by the tv
+    hotspotLayer.setEnabled(false);
+    $('#hotspots').hidden = true;
+    nav.hide();
+    hint.hide();
+    houseSince = mode.kind === 'house' ? mode.since : performance.now();
+    mode = { kind: 'memory' };
+    document.body.classList.add('in-memory');
+    audio.setRain(0.12);
+    audio.tapeStart();
+    memoryRun = createMemoryScene({
+      r, audio, hud: memoryHud, stage,
+      level: build(),
+      progress: memories[id],
+      settings: () => settings,
+      onSave: (next) => saveMemory(id, next),
+      onExit: ({ finished }) => {
+        memoryRun = null;
+        document.body.classList.remove('in-memory');
+        $('#hotspots').hidden = false;
+        mode = { kind: 'house', since: houseSince };
+        osdKey = '';
+        showArea(view.area);
+        arrive(view);
+        rebuildTapes();
+        nextStrikeAt = performance.now() + 5000;
+        setTimeout(() => hint.show(finished
+          ? 'the tape runs out. the house comes back around you, and somewhere a tv hisses.'
+          : 'you let go of the tape. the house comes back.', 5500), 400);
+      },
+    });
+  }
+
+  // Browser checks only (?debug in the URL): reach into a running memory.
+  if (new URLSearchParams(location.search).has('debug')) {
+    window.rewindDebug = { memory: () => memoryRun, enterMemory: (id) => enterMemory(id) };
+  }
 
   // ----- cold open -----
 
@@ -749,6 +829,12 @@ function start(r) {
     last = now;
     const time = now / 1000;
     const reduce = settings.reduceFlashing;
+
+    if (memoryRun) {
+      memoryRun.frame(now, dt);
+      requestAnimationFrame(frame);
+      return;
+    }
 
     if (mode.kind === 'transition') {
       const outMs = reduce ? 600 : 700;

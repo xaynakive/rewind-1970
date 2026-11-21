@@ -1,0 +1,24 @@
+# Tasks: Memories
+
+- [x] 1. Renderer support: per-mesh model matrix and highlight, flashlight, glossy studio material, detail scale
+  - _Requirements: 3.3, 4.1, 4.3, 7.1_
+- [x] 2. Walking and reaching, with unit and property tests
+  - `walker.js`, `reach.js`
+  - _Requirements: 2.1, 2.3, 2.4, 2.5, 3.1, 3.2_
+- [x] 3. The presence, with unit and property tests
+  - `presence.js`
+  - _Requirements: 5.1–5.6_
+- [x] 4. The night market level
+  - `market.js`: hall, 16 stalls, tables, lanterns, stairwell, moving parts, items, hiding places, route
+  - _Requirements: 6.1–6.5_
+- [x] 5. Running a memory: input (keyboard, mouse, pointer lock, touch), parts, inspect view, hiding, catches, ending
+  - `memoryScene.js`, `ui/memoryHud.js`
+  - _Requirements: 1.2, 2.2, 3.3–3.6, 4.1–4.4, 5.4, 6.3, 7.1, 7.2_
+- [x] 6. Sound: footsteps, the presence's steps, heartbeat, murmur, radio static, static bursts
+  - _Requirements: 5.7_
+- [x] 7. Wiring: "step inside" on the playback, story mode setting, progress in `meta`, leaving and returning
+  - _Requirements: 1.1, 1.3, 1.4, 1.5, 5.6, 7.3_
+- [ ] 8. Check touch controls on a real phone (the test browser has no touch screen)
+  - _Requirements: 2.2_
+- [ ] 9. The school at night (second memory)
+- [ ] 10. The dive into the pond (third memory, the ending)

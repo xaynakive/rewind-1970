@@ -40,6 +40,8 @@ Use these colours as the base. New colours should be justified against this list
 ## Lighting
 - Three point lights per area, plus ambient. Interiors are lit mostly by the pumpkins, the TV and lightning through windows.
 - Lightning is a short full-scene flash (about 80–150 ms, sometimes double) followed by a delayed thunder sound.
+- Inside memories: the three lights nearest the eye (lanterns, stall lights) plus a flashlight cone. Large surfaces are split into 1 m cells (`MeshBuilder.quadGrid`) so per-vertex light can land on them.
+- Close-ups (the inspect view) render at twice the resolution and use the glossy material (emissive code 7): flat-shaded facets that reflect a small dark studio with one sweeping strip light, like a car in a showroom.
 
 ## Accessibility
 - **Visibility comes first.** The default picture leans bright, so people with low vision can see the rooms. Settings has a brightness slider (moody ↔ bright) and "clear picture", which cuts static, tracking and glitches to about a third and softens the scanlines. Both default up when the system asks for more contrast (`prefers-contrast: more`).

@@ -36,6 +36,9 @@ All 10 hiding spots can be reached. Carry a tape from anywhere in the house to t
 
 - **Whose house is this?** Someone lived here before you. Five of her tapes, dated Oct 31 1970, are hidden around the house. The first waits in the mailbox; the others show up when you watch the lightning, notice what's in the pond, rewind your own memories, and find the rest. Rewind each one to hear the end of it, then answer the house at the TV (or from settings). Solve it with your own tapes in fair shape and the final tape becomes a fifth ending.
 
+- **Step inside her tapes.** Rewind the mailbox tape and you can step through the TV into Edith's memory of **the night market**, Oct 30 1970: a covered hall of tiny stalls, tables in the aisle, paper lanterns. Walk it in first person, open drawers, tins and cabinets, pick things up and turn them over in a showroom-style close-up, and read the notes she left herself. Her twin sister June walks ahead of you. After a while something else walks the aisles too. Hide behind a curtain, in the photo booth or under a table; if it reaches you, the tape just skips back. **Story mode** turns the chase off.
+  - Desktop: click to look, W A S D or arrows to walk, E to use, L for the flashlight, Shift to sneak, Tab for notes, Esc to pause. Touch: drag left to walk, drag right to look, tap **use**.
+
 Next: polish (sound, small things that change when you're not looking) and the write-up. See `.kiro/specs/*/tasks.md`.
 
 ## Run locally
@@ -68,7 +71,7 @@ npm test
 This project is spec-first. Everything in `.kiro/` is part of the entry:
 
 - **`.kiro/steering/`**: the rules every change follows. `product.md` covers tone ("suggestion over shock", decay never deletes a memory). `art-style.md` covers the PS1 rendering rules, triangle budgets, the 9-colour palette and flashing limits. `tech.md` covers the stack and conventions, including the decision record for raw WebGL. `structure.md` covers the layout.
-- **`.kiro/specs/`**: one spec per system (cold open, tapes, decay, house, pond, endings, mystery). Each has requirements written as acceptance criteria, a design, and a task list that is ticked off as the code lands.
+- **`.kiro/specs/`**: one spec per system (cold open, tapes, decay, house, pond, endings, mystery, memories). Each has requirements written as acceptance criteria, a design, and a task list that is ticked off as the code lands.
 - Pure logic named in the specs (decay curve, tape placement, lightning timing, boot lines, the case) is covered by unit tests in `tests/`, which check the acceptance criteria directly. `tests/properties.test.js` adds property-based tests: the spec rules (decay never passes 0.85, drift never changes a word, the boot screen always fits) checked over hundreds of generated inputs, with a small seeded helper instead of a library.
 - **`.kiro/hooks/`**: agent hooks. Tests run when the agent saves a source file, a spec-sync check runs when a system changes, and the agent can't finish a turn while a module fails to parse or a test fails.
 - The full story of how Kiro was used is in [docs/writeup.md](docs/writeup.md).

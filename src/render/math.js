@@ -101,3 +101,37 @@ export function normalize(v) {
   const len = Math.hypot(v[0], v[1], v[2]);
   return len < 1e-8 ? [0, 1, 0] : [v[0] / len, v[1] / len, v[2] / len];
 }
+
+// ----- model transforms (moving parts in memories) -----
+
+export function translation([x, y, z]) {
+  return new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, x, y, z, 1]);
+}
+
+/** Rotation around the vertical axis. Positive angles turn +z toward +x (same as mesh.rotateY). */
+export function rotationY(a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return new Float32Array([c, 0, -s, 0, 0, 1, 0, 0, s, 0, c, 0, 0, 0, 0, 1]);
+}
+
+/** Rotation around the x axis. Positive angles turn +y toward +z. */
+export function rotationX(a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return new Float32Array([1, 0, 0, 0, 0, c, s, 0, 0, -s, c, 0, 0, 0, 0, 1]);
+}
+
+/** Rotation around the z axis. Positive angles turn +x toward +y. */
+export function rotationZ(a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return new Float32Array([c, s, 0, 0, -s, c, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
+}
+
+/** Rotation by `angle` around an axis ('x', 'y' or 'z') through `pivot`. */
+export function rotationAbout(pivot, axis, angle) {
+  const rot = axis === 'x' ? rotationX(angle) : axis === 'z' ? rotationZ(angle) : rotationY(angle);
+  return multiply(translation(pivot), multiply(rot, translation([-pivot[0], -pivot[1], -pivot[2]])));
+}
+
+export function scaling(k) {
+  return new Float32Array([k, 0, 0, 0, 0, k, 0, 0, 0, 0, k, 0, 0, 0, 0, 1]);
+}

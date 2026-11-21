@@ -8,6 +8,7 @@ export const HOUSE_TAPES = [
   {
     id: 'house-1',
     spot: 'house-mailbox',
+    memory: 'market', // rewinding it lets you step inside (spec: memories)
     label: 'for whoever lives here',
     reveal: 'always',
     decay: 0.55,
@@ -117,6 +118,7 @@ export function asTape(tape, progress) {
     spot: tape.spot,
     found: progress.found.includes(tape.id),
     rewound,
+    memory: tape.memory ?? null,
     decay: rewound ? 0 : tape.decay,
     rewindCount: 0,
   };

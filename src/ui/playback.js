@@ -27,8 +27,18 @@ export function createPlayback(dialog, { onClose }) {
   const note = dialog.querySelector('.playback-note');
   const noise = dialog.querySelector('.playback-noise');
   const nctx = noise.getContext('2d');
+  const enterButton = dialog.querySelector('[data-action="enter"]');
   let raf = 0;
   let current = null;
+  /** Set while a tape that can be walked into is playing (spec: memories, Requirement 1.1). */
+  let onEnter = null;
+  enterButton.addEventListener('click', () => {
+    const go = onEnter;
+    onEnter = null;
+    if (current) current.entering = true;
+    dialog.close();
+    go?.();
+  });
 
   dialog.querySelector('[data-action="eject"]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
@@ -58,10 +68,13 @@ export function createPlayback(dialog, { onClose }) {
 
     /**
      * @param {{id:string,label:string,text:string,createdAt:number}} tape
-     * @param {{ level: number, rewound: boolean, reduce: boolean, note?: string }} opts
+     * @param {{ level: number, rewound: boolean, reduce: boolean, note?: string, enter?: () => void }} opts
      *   note: replaces the usual line under the text (used by the house's tapes)
+     *   enter: shows "step inside", which closes the tape and calls this
      */
-    open(tape, { level, rewound, reduce, note: customNote }) {
+    open(tape, { level, rewound, reduce, note: customNote, enter }) {
+      onEnter = enter ?? null;
+      enterButton.hidden = !enter;
       const d = rewound ? 0 : Math.max(0, Math.min(1, level / MAX_DECAY));
       const stage = rewound ? 'clean' : decayStage(level);
       current = { tapeId: tape.id, rewound };

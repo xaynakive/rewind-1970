@@ -74,7 +74,9 @@ function build(gl, canvas) {
     'uViewProj', 'uSnapRes', 'uAmbient', 'uLightPos', 'uLightColor', 'uLightRange',
     'uFlashDir', 'uFlash', 'uFlashColor', 'uSky', 'uCamPos', 'uFog', 'uFogColor', 'uTime',
     'uRipples', 'uReveal', 'uWater', 'uGamma',
+    'uModel', 'uHighlight', 'uSpotPos', 'uSpotDir', 'uSpotColor', 'uSpotShape', 'uSweep',
   ]);
+  const IDENTITY = new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1]);
   const noRipples = new Float32Array(24).fill(-1);
   const sceneA = {
     pos: gl.getAttribLocation(sceneProg, 'aPos'),
@@ -118,6 +120,14 @@ function build(gl, canvas) {
 
   /** Picture settings: gamma lifts the shadows; `clear` turns the film damage down for low vision. */
   let picture = { gamma: 1.7, clear: false };
+  /** Extra resolution for the scene pass (the inspect view uses 2). */
+  let detail = 1;
+  let stageSize = null;
+  function fitLowRes() {
+    if (!stageSize) return;
+    const lr = lowResFor(stageSize.w, stageSize.h);
+    setLowRes(lr.w * detail, lr.h * detail);
+  }
 
   return {
     gl,
@@ -125,6 +135,13 @@ function build(gl, canvas) {
 
     setPicture(next) {
       picture = { ...picture, ...next };
+    },
+
+    /** Scene-pass resolution multiplier: 1 normally, 2 for close-ups. */
+    setDetail(k) {
+      if (k === detail) return;
+      detail = k;
+      fitLowRes();
     },
 
     createMesh(data) {
@@ -147,8 +164,8 @@ function build(gl, canvas) {
         canvas.width = w;
         canvas.height = h;
       }
-      const lr = lowResFor(cssW, cssH);
-      setLowRes(lr.w, lr.h);
+      stageSize = { w: cssW, h: cssH };
+      fitLowRes();
     },
 
     /** Draws meshes into the low-res target. */
@@ -180,10 +197,19 @@ function build(gl, canvas) {
       gl.uniform1f(sceneU.uReveal, f.reveal ?? 0);
       gl.uniform3fv(sceneU.uWater, f.water ?? [0, 0, 0]);
       gl.uniform1f(sceneU.uGamma, picture.gamma);
+      const spot = f.spot;
+      gl.uniform3fv(sceneU.uSpotPos, spot ? spot.pos : [0, 0, 0]);
+      gl.uniform3fv(sceneU.uSpotDir, spot ? spot.dir : [0, 0, -1]);
+      gl.uniform3fv(sceneU.uSpotColor, spot ? spot.color.map((c) => c * spot.intensity) : [0, 0, 0]);
+      gl.uniform3f(sceneU.uSpotShape, spot ? Math.cos(spot.inner) : 1, spot ? Math.cos(spot.outer) : 1, spot ? spot.range : 1);
+      gl.uniform1f(sceneU.uSweep, f.sweep ?? 0);
 
       const stride = FLOATS_PER_VERTEX * 4;
       for (const a of Object.values(sceneA)) gl.enableVertexAttribArray(a);
       for (const m of meshList) {
+        if (m.hidden) continue;
+        gl.uniformMatrix4fv(sceneU.uModel, false, m.model ?? IDENTITY);
+        gl.uniform1f(sceneU.uHighlight, m.highlight ?? 0);
         gl.bindBuffer(gl.ARRAY_BUFFER, m.buffer);
         gl.vertexAttribPointer(sceneA.pos, 3, gl.FLOAT, false, stride, 0);
         gl.vertexAttribPointer(sceneA.normal, 3, gl.FLOAT, false, stride, 12);

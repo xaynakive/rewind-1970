@@ -19,6 +19,26 @@
     <div id="boot-text" class="sr-only" aria-live="polite"></div>
     <div id="tv-text" class="sr-only" aria-live="polite"></div>
 
+    <div id="memory-hud" class="memory-hud" hidden>
+      <div class="mem-crosshair" aria-hidden="true"></div>
+      <p class="mem-prompt" aria-live="polite"></p>
+      <p class="mem-line" role="status" aria-live="polite"></p>
+      <p class="mem-help"></p>
+      <ul class="mem-inventory" aria-label="what you carry"></ul>
+      <div class="mem-caption" hidden>
+        <h2 class="mem-caption-name"></h2>
+        <p class="mem-caption-text"></p>
+        <p class="mem-caption-help"></p>
+      </div>
+      <div class="mem-touch" hidden>
+        <button type="button" data-mem="pause" class="mem-btn mem-btn-pause">pause</button>
+        <button type="button" data-mem="notes" class="mem-btn mem-btn-notes">notes</button>
+        <button type="button" data-mem="light" class="mem-btn mem-btn-light">light</button>
+        <button type="button" data-mem="use" class="mem-btn mem-btn-use">use</button>
+      </div>
+      <div class="mem-vignette" aria-hidden="true"></div>
+    </div>
+
     <div id="no-webgl" class="no-webgl" hidden>
       <p>this tape won't play here.</p>
       <p>your browser can't show the house (WebGL is off or unsupported). you can still write and read tapes from <strong>settings</strong>.</p>
@@ -63,6 +83,7 @@
     <label class="toggle"><input type="checkbox" name="reduceFlashing"> reduce flashing</label>
     <label class="toggle"><input type="checkbox" name="sound"> sound</label>
     <label class="toggle"><input type="checkbox" name="demoTime"> demo time: one minute is one day <span class="toggle-note">(tapes decay much faster)</span></label>
+    <label class="toggle"><input type="checkbox" name="storyMode"> story mode <span class="toggle-note">(inside her memories, nothing chases you)</span></label>
 
     <h3>tapes (text only)</h3>
     <ul class="reader-list"></ul>
@@ -103,7 +124,27 @@
     <div class="playback-text" tabindex="-1" autofocus></div>
     <p class="playback-note" role="status"></p>
     <div class="actions">
+      <button type="button" data-action="enter" class="enter-memory" hidden>step inside</button>
       <button type="button" data-action="eject">eject</button>
+    </div>
+  </dialog>
+
+  <dialog id="memory-pause" class="panel" aria-labelledby="memory-pause-title">
+    <h2 id="memory-pause-title">paused</h2>
+    <p class="case-intro">the tape holds still. nothing moves while you're here.</p>
+    <label class="toggle"><input type="checkbox" name="memStory"> story mode <span class="toggle-note">(nothing chases you)</span></label>
+    <div class="actions">
+      <button type="button" data-action="leave">leave the memory</button>
+      <button type="button" data-action="notes">her notes</button>
+      <button type="button" data-action="resume">keep going</button>
+    </div>
+  </dialog>
+
+  <dialog id="memory-notes" class="panel" aria-labelledby="memory-notes-title">
+    <h2 id="memory-notes-title">her notes</h2>
+    <ul class="reader-list mem-notes-list"></ul>
+    <div class="actions">
+      <button type="button" data-action="close">close</button>
     </div>
   </dialog>
 

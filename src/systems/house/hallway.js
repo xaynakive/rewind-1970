@@ -66,6 +66,8 @@ export function buildHallway() {
     spots: {
       // On the crate under the ladder, as if brought down from the attic.
       'attic-hatch': { pos: [0.45, 0.49, -2.62], rotY: -0.12, maxStack: 3 },
+      // The previous resident's last tape, on the top rung of the attic ladder.
+      'house-attic': { pos: [0, 2.45, -2.25], rotY: 0, maxStack: 1 },
     },
     hotspots: [],
     sky: PALETTE.night,

@@ -2,16 +2,16 @@
 
 ## Pure logic (`systems/endings/endings.js`)
 ```ts
-type EndingId = 'still-water' | 'kept' | 'tracking' | 'static';
+type EndingId = 'found' | 'still-water' | 'kept' | 'tracking' | 'static';
 
 isUnlocked(tapes): boolean                    // ≥ 5 tapes and every one found
 healthyShare(tapes, now, timeScale): number   // share at stage clean or worn
-chooseEnding(tapes, now, pondSecretNoticed, timeScale): EndingId
+chooseEnding(tapes, now, pondSecretNoticed, timeScale, mysterySolved): EndingId
 pickFragments(tapes): string[]
 buildFinalTape(tapes, ending, { formatDate }): FinalTapeScript
 finaleTimeline(script): Segment[]; segmentAt(timeline, t); segmentStart(timeline, kind)
 ```
-`chooseEnding` checks in order: still water (pond noticed and ≥ 80% healthy), kept (≥ 80%), static (< 40%), tracking. It uses the same demo time scale as decay, so demo time affects the ending too.
+`chooseEnding` checks in order: found (case solved and ≥ 40% healthy), still water (pond noticed and ≥ 80% healthy), kept (≥ 80%), static (< 40%), tracking. It uses the same demo time scale as decay, so demo time affects the ending too.
 
 ## The final tape's script
 Built only from the user's own data on the device:
@@ -19,12 +19,13 @@ Built only from the user's own data on the device:
 2. Up to 5 fragments of 3–6 words, one per tape, from tapes chosen by a seeded shuffle (seed = `fnv1a(first tape id)`), played oldest first. Trailing little words ("a", "the", "and"…) are trimmed and trailing commas dropped, so a fragment sounds cut off rather than broken.
 3. `you kept coming back to "<label of the most rewound tape>".`, or "you never rewound a single one."
 4. The ending's lines, by tone:
+   - found: "you found her." / "she isn't in the water anymore." / "she's on a tape, where she wanted to be."
    - kept: "you kept them." / "the house will keep them too."
    - still water: "you kept them." / "you saw what was under the water." / "it was only waiting to be remembered."
    - tracking: "some of them are slipping." / "you can still catch them."
    - static: "most of them are static now." / "they're still in there." / "rewind them."
 
-None of the lines mention 1970 or VHS (tested). The script also carries `decay` (kept and still water 0.1, tracking 0.4, static 0.8), `title` and `seed`.
+None of the lines mention 1970 or VHS (tested). The house tapes from the mystery spec never feed the final tape: it is made only of the user's own tapes. The script also carries `decay` (found 0.05, kept and still water 0.1, tracking 0.4, static 0.8), `title` and `seed`.
 
 ## Unlocking and the tape in the VCR (`main.js`, `systems/house/livingRoom.js`)
 - `rebuildTapes()` checks `isUnlocked`. When it turns true, the next playback close shows "downstairs, the vcr clicks. something slides into it."

@@ -17,6 +17,7 @@ Rewind 1970 turns journaling into a haunted exploration. Each memory the user wr
 - No blood, wounds, body horror or jump scares with loud audio stings.
 - Fear comes from things that are slightly wrong: an impossible date, an object that moved, a shape seen only for a moment under lightning.
 - The heart of the app is soft. The horror exists to bring forgotten memories back, not to punish the user.
+- Inside her memories, something follows you, but it never hurts anyone on screen. Being caught is a skip in the tape. Story mode turns the chase off, and walking away always works.
 - Never mock or judge what the user writes. Tape decay is a visual effect only. It must never delete or alter the stored memory text.
 
 ## Core experience

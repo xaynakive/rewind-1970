@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "spec-sync",
+      "description": "After a change to a system, make sure its spec still describes the code (structure.md rule).",
+      "enabled": true,
+      "trigger": "PostFileSave",
+      "matcher": "(^|/)src/(systems|memory)/",
+      "action": {
+        "type": "agent",
+        "prompt": "A file under src/systems/ or src/memory/ changed. Find the matching spec in .kiro/specs/ (one folder per system). If the change alters behaviour, numbers, text the player sees, or file names described there, update requirements.md or design.md in the same change and tick the task in tasks.md. Also check the tone rules in .kiro/steering/product.md (spooky, never gore; memories stay on the device). Reply with what you changed, or 'specs in sync'."
+      }
+    }
+  ]
+}

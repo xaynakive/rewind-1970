@@ -18,11 +18,12 @@ The tapes the user finds, and how healthy they are, decide the ending. The final
 ### Requirement 2: Choosing the ending
 #### Acceptance criteria
 1. The system SHALL choose one ending using these rules, checked in order:
-   1. **"Still Water"**: the pond secret was noticed, and at least 80% of tapes are healthy.
-   2. **"Kept"**: at least 80% of tapes are healthy.
-   3. **"Static"**: fewer than 40% of tapes are healthy.
-   4. **"Tracking"**: every other case.
-2. The ending choice SHALL be a pure function of the tapes, the current time and the pond flag.
+   1. **"Found"**: the house's case is solved (see the mystery spec), and at least 40% of tapes are healthy.
+   2. **"Still Water"**: the pond secret was noticed, and at least 80% of tapes are healthy.
+   3. **"Kept"**: at least 80% of tapes are healthy.
+   4. **"Static"**: fewer than 40% of tapes are healthy.
+   5. **"Tracking"**: every other case.
+2. The ending choice SHALL be a pure function of the tapes, the current time, the pond flag and the case flag.
 
 ### Requirement 3: The final tape
 **User story:** As a user, I want the final tape to feel impossible: something I never recorded, but made of me.
@@ -32,7 +33,7 @@ The tapes the user finds, and how healthy they are, decide the ending. The final
 2. WHEN played on the TV THEN the final tape SHALL show content built only from the user's own data on the device: the date and time of their first tape, the label of their most rewound tape, and short fragments of their own words.
 3. The final tape SHALL end on a view of the living room from the TV's point of view, showing the sofa where the user would sit, with the timestamp `OCT 31 1970 00:00`.
 4. The final tape SHALL NOT explain the 1970 date.
-5. The final tape content SHALL vary by ending, using the ending's tone: warm for "Kept" and "Still Water", uneasy for "Tracking", and broken for "Static".
+5. The final tape content SHALL vary by ending, using the ending's tone: warm for "Kept", "Still Water" and "Found", uneasy for "Tracking", and broken for "Static".
 
 ### Requirement 4: After the ending
 #### Acceptance criteria

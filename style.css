@@ -337,3 +337,104 @@ html, body {
   .playback-text { animation: none !important; }
   .hint { transition: none; }
 }
+
+/* ---------- the case ---------- */
+
+.case fieldset { border: 1px solid #3a372f; margin: 0 0 0.6rem; padding: 0.3rem 0.9rem 0.4rem; }
+.case .toggle { margin: 0.3rem 0; min-height: 28px; }
+/* The answer buttons stay on screen even when the questions need scrolling. */
+.case .actions { position: sticky; bottom: -1.25rem; background: #0d0c10; padding: 0.6rem 0 0.2rem; margin-bottom: -0.2rem; }
+.case legend { padding: 0 0.4rem; letter-spacing: 0.08em; color: #f1e9d2; }
+.case-intro { opacity: 0.75; margin: -0.4rem 0 0.7rem; font-style: italic; }
+.case-status { min-height: 1.3em; color: #e8c98a; }
+
+/* ---------- memories: walking inside her tapes (spec: memories) ---------- */
+
+.memory-hud { position: absolute; inset: 0; pointer-events: none; z-index: 3; }
+.memory-hud[hidden] { display: none; }
+body.in-memory .corner-buttons { display: none; }
+
+.mem-crosshair {
+  position: absolute; left: 50%; top: 50%;
+  width: 8px; height: 8px; margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  background: rgba(244, 236, 214, 0.55);
+  box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.6);
+  transition: transform 0.15s ease, background 0.15s ease;
+}
+.mem-crosshair.active { transform: scale(1.8); background: #f4ecd6; }
+.mem-crosshair[hidden] { display: none; }
+
+.mem-prompt, .mem-line, .mem-help {
+  position: absolute; left: 50%; transform: translateX(-50%);
+  margin: 0; width: 88%; text-align: center;
+  color: #f4ecd6;
+  text-shadow: 0 0 6px #000, 0 0 14px rgba(0, 0, 0, 0.9), 0 1px 2px #000;
+  opacity: 0; transition: opacity 0.4s ease;
+}
+.mem-prompt { top: calc(50% + 26px); font-size: clamp(18px, 2.4vw, 30px); letter-spacing: 0.05em; }
+.mem-prompt.visible { opacity: 1; }
+.mem-line { top: 24%; font-size: clamp(18px, 2.4vw, 30px); font-style: italic; letter-spacing: 0.04em; transition: opacity 1s ease; }
+.mem-line.visible { opacity: 1; }
+.mem-help { bottom: 14%; font-size: clamp(14px, 1.6vw, 20px); opacity: 0; transition: opacity 1.2s ease; }
+.mem-help.visible { opacity: 0.9; }
+
+.mem-inventory {
+  /* Top right: the VHS date stamp owns the bottom left, PLAY the top left. */
+  position: absolute; right: 16px; top: 16px; margin: 0; padding: 0;
+  list-style: none; display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 6px; max-width: 46%;
+}
+/* On touch screens the notes button sits in that corner. */
+@media (pointer: coarse) { .mem-inventory { top: 96px; } }
+.mem-inventory li {
+  font-family: var(--mono); font-size: clamp(13px, 1.4vw, 17px);
+  color: #f4ecd6; background: rgba(13, 12, 16, 0.78);
+  border: 1px solid #5a5446; padding: 4px 10px;
+}
+.mem-inventory[hidden] { display: none; }
+
+.mem-caption {
+  position: absolute; left: 50%; bottom: 7%; transform: translateX(-50%);
+  width: min(90%, 760px); text-align: center; color: #f4ecd6;
+  text-shadow: 0 0 6px #000, 0 0 16px #000;
+}
+.mem-caption[hidden] { display: none; }
+.mem-caption-name { margin: 0 0 0.4rem; font-family: var(--mono); font-size: clamp(20px, 2.6vw, 32px); letter-spacing: 0.12em; }
+.mem-caption-text { margin: 0 0 0.6rem; font-size: clamp(17px, 2.1vw, 26px); line-height: 1.45; }
+.mem-caption-help { margin: 0; font-size: clamp(13px, 1.4vw, 17px); opacity: 0.7; }
+
+.mem-touch { position: absolute; inset: 0; }
+.mem-touch[hidden] { display: none; }
+.mem-btn {
+  position: absolute; pointer-events: auto;
+  min-width: 64px; min-height: 64px; padding: 0 14px;
+  font-family: var(--mono); font-size: 16px; letter-spacing: 0.08em;
+  color: #f4ecd6; background: rgba(13, 12, 16, 0.72);
+  border: 1px solid #6a6252; border-radius: 32px;
+}
+.mem-btn-use { right: 20px; bottom: 28%; min-width: 84px; min-height: 84px; border-radius: 42px; border-color: var(--crt-glow); }
+.mem-btn-light { right: 120px; bottom: 18%; }
+.mem-btn-notes { right: 20px; top: 16px; }
+.mem-btn-pause { left: 16px; top: 16px; }
+
+.mem-vignette {
+  position: absolute; inset: 0; opacity: 0; transition: opacity 0.6s ease;
+  background: radial-gradient(ellipse at center, transparent 35%, rgba(0, 0, 0, 0.85) 100%);
+}
+.memory-hud.hiding .mem-vignette { opacity: 1; }
+.memory-hud.hiding .mem-crosshair { display: none; }
+
+#memory-pause .actions, #memory-notes .actions { flex-wrap: wrap; }
+.mem-notes-list h3 { margin: 0 0 0.3rem; font-size: 1rem; letter-spacing: 0.06em; }
+.mem-notes-list .reader-text { font-size: 1.1rem; }
+.playback .enter-memory { border-color: var(--crt-glow); color: var(--crt-glow); }
+/* Hiding in a locker: you look out through its vents. */
+.memory-hud.slats .mem-vignette {
+  background:
+    repeating-linear-gradient(to bottom, rgba(0, 0, 0, 0.9) 0 18px, transparent 18px 40px),
+    radial-gradient(ellipse at center, transparent 30%, rgba(0, 0, 0, 0.9) 100%);
+}
+
+/* Words stay above the hiding overlays. */
+.mem-vignette { z-index: 1; }
+.mem-prompt, .mem-line, .mem-help, .mem-caption, .mem-inventory, .mem-touch, .mem-crosshair { z-index: 2; }

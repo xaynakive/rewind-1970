@@ -2,13 +2,15 @@
 
 > a haunted journal. your memories become VHS tapes hidden around a dark house, and you have to find and rewind them before they decay.
 
-A Kiroween entry (Costume Contest), and a strange room inside [Elsewhere](https://xaynakive.com).
+**▶ [Play it in your browser](https://xaynakive.github.io/rewind-1970/)**: no install, works on desktop and phone. Turn the sound on.
+
+A Kiroween entry (Costume Contest), and a strange room inside [Elsewhere](https://xaynakive.com). How it was built with Kiro: [docs/writeup.md](docs/writeup.md).
 
 The tape opens on a date that shouldn't exist: **October 31, 1970, 00:00**, years before VHS was invented. Press play and you're inside the house. Write a memory into the VCR and it becomes a tape, hidden somewhere you'll have to go looking for it. Tapes you neglect slowly decay. Rewinding them on the living-room TV brings them back.
 
 Spooky, never gore. Your memories never leave your device.
 
-## Status: milestone 5
+## Status
 
 Working now:
 - Cold open: a found-tape boot screen in a pixel VCR font, with tracking lines, colour bleed and grain.
@@ -31,6 +33,12 @@ All 10 hiding spots can be reached. Carry a tape from anywhere in the house to t
 - **The pond.** Touch the still water and ripples spread through the moon's reflection. Tapes hidden in the pond float up while you watch. And sometimes, when lightning strikes or the ripples settle, you see what's lying beneath the surface.
 
 - **The endings.** Once you have at least 5 tapes and have found every one, something appears in the VCR, at first only when the sky lights up. Play it. It's a tape you never recorded, made from your own memories, and which of four endings it becomes depends on how well you kept them.
+
+- **Whose house is this?** Someone lived here before you. Five of her tapes, dated Oct 31 1970, are hidden around the house. The first waits in the mailbox; the others show up when you watch the lightning, notice what's in the pond, rewind your own memories, and find the rest. Rewind each one to hear the end of it, then answer the house at the TV (or from settings). Solve it with your own tapes in fair shape and the final tape becomes a fifth ending.
+
+- **Step inside her tapes.** Rewind the mailbox tape and you can step through the TV into Edith's memory of **the night market**, Oct 30 1970: a covered hall of tiny stalls, tables in the aisle, paper lanterns. Walk it in first person, open drawers, tins and cabinets, pick things up and turn them over in a showroom-style close-up, and read the notes she left herself. Her twin sister June walks ahead of you. After a while something else walks the aisles too. Hide behind a curtain, in the photo booth or under a table; if it reaches you, the tape just skips back. **Story mode** turns the chase off.
+- **The school at night.** Rewind the grave tape and step into March 14 1962: a corridor of lockers with lightning in the windows, the twins' classroom, the music room and the girls' bathroom. Find the notes in their desks, the class register and the piano, take the caretaker's keys from June's locker, and open the chained door to the stairs where June is waiting. Someone with a lamp walks the corridor; hide in a locker and watch through the vents, or in a bathroom stall.
+  - Desktop: click to look, W A S D or arrows to walk, E to use, L for the flashlight, Shift to sneak, Tab for notes, Esc to pause. Touch: drag left to walk, drag right to look, tap **use**.
 
 Next: polish (sound, small things that change when you're not looking) and the write-up. See `.kiro/specs/*/tasks.md`.
 
@@ -64,8 +72,10 @@ npm test
 This project is spec-first. Everything in `.kiro/` is part of the entry:
 
 - **`.kiro/steering/`**: the rules every change follows. `product.md` covers tone ("suggestion over shock", decay never deletes a memory). `art-style.md` covers the PS1 rendering rules, triangle budgets, the 9-colour palette and flashing limits. `tech.md` covers the stack and conventions, including the decision record for raw WebGL. `structure.md` covers the layout.
-- **`.kiro/specs/`**: one spec per system (cold open, tapes, decay, house, pond, endings). Each has requirements written as acceptance criteria, a design, and a task list that is ticked off as the code lands.
-- Pure logic named in the specs (decay curve, tape placement, lightning timing, boot lines) is covered by unit tests in `tests/`, which check the acceptance criteria directly.
+- **`.kiro/specs/`**: one spec per system (cold open, tapes, decay, house, pond, endings, mystery, memories). Each has requirements written as acceptance criteria, a design, and a task list that is ticked off as the code lands.
+- Pure logic named in the specs (decay curve, tape placement, lightning timing, boot lines, the case) is covered by unit tests in `tests/`, which check the acceptance criteria directly. `tests/properties.test.js` adds property-based tests: the spec rules (decay never passes 0.85, drift never changes a word, the boot screen always fits) checked over hundreds of generated inputs, with a small seeded helper instead of a library.
+- **`.kiro/hooks/`**: agent hooks. Tests run when the agent saves a source file, a spec-sync check runs when a system changes, and the agent can't finish a turn while a module fails to parse or a test fails.
+- The full story of how Kiro was used is in [docs/writeup.md](docs/writeup.md).
 
 ## Accessibility
 

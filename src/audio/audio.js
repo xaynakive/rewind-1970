@@ -166,5 +166,105 @@ export function createAudio() {
       osc.start(t + 0.05);
       osc.stop(t + 1.2);
     },
+
+    // ----- memories (spec: memories, Requirement 5.7) -----
+
+    /** A short filtered noise hit: footsteps, drawers, the presence's steps. */
+    knock({ freq = 400, q = 1, gain = 0.1, length = 0.08, rate = 1, delay = 0 } = {}) {
+      if (!ctx) return;
+      const t = ctx.currentTime + delay;
+      const src = ctx.createBufferSource();
+      src.buffer = noise;
+      src.playbackRate.value = rate;
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = freq;
+      f.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), t + 0.005);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + length);
+      src.connect(f).connect(g).connect(master);
+      src.start(t, Math.random() * 1.5);
+      src.stop(t + length + 0.02);
+    },
+
+    /** The user's footstep on tiles. */
+    footstep(sneak) {
+      this.knock({ freq: 260 + Math.random() * 120, q: 1.4, gain: sneak ? 0.035 : 0.08, length: 0.09 });
+    },
+
+    /** The presence's footstep: heavier, slower, at a loudness that tells you how close it is. */
+    presenceStep(level) {
+      if (level < 0.02) return;
+      this.knock({ freq: 120 + Math.random() * 30, q: 2, gain: 0.18 * level, length: 0.16, rate: 0.6 });
+    },
+
+    /** Drawer slide, lid, cabinet door, shutter. */
+    furniture(kind) {
+      if (kind === 'shutter') {
+        for (let i = 0; i < 9; i++) this.knock({ freq: 700 + Math.random() * 500, q: 3, gain: 0.06, length: 0.06, delay: i * 0.07 });
+      } else if (kind === 'drawer') {
+        this.knock({ freq: 520, q: 0.8, gain: 0.07, length: 0.28, rate: 0.7 });
+      } else {
+        this.knock({ freq: 900, q: 6, gain: 0.05, length: 0.35, rate: 0.4 }); // a creak
+      }
+    },
+
+    /** Continuous levels 0..1: heartbeat (the presence is near), the market's murmur, radio static. */
+    setMemoryLevels({ heartbeat = 0, murmur = 0, radio = 0 }) {
+      if (!ctx) return;
+      if (!this._mem) {
+        const m = {};
+        m.murmur = loop('bandpass', 380, 0);
+        m.radio = loop('bandpass', 2400, 0);
+        m.heartbeat = 0;
+        m.nextBeat = 0;
+        this._mem = m;
+      }
+      const m = this._mem;
+      m.murmur.gain.setTargetAtTime(0.05 * murmur, ctx.currentTime, 0.5);
+      m.radio.gain.setTargetAtTime(0.06 * radio, ctx.currentTime, 0.2);
+      m.heartbeat = heartbeat;
+      // Heartbeat: lub-dub, faster and louder as it comes closer.
+      if (heartbeat > 0.05 && ctx.currentTime >= m.nextBeat) {
+        const t = ctx.currentTime;
+        for (const [d, g] of [[0, 1], [0.16, 0.7]]) {
+          const osc = ctx.createOscillator();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(62, t + d);
+          osc.frequency.exponentialRampToValueAtTime(40, t + d + 0.12);
+          const og = ctx.createGain();
+          og.gain.setValueAtTime(0.0001, t + d);
+          og.gain.exponentialRampToValueAtTime(0.25 * heartbeat * g, t + d + 0.02);
+          og.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.18);
+          osc.connect(og).connect(master);
+          osc.start(t + d);
+          osc.stop(t + d + 0.2);
+        }
+        m.nextBeat = t + 1.1 - 0.55 * heartbeat;
+      }
+    },
+
+    /** A burst of tape static: being caught, the end of a memory. */
+    staticBurst(seconds = 1.2) {
+      if (!ctx) return;
+      const t = ctx.currentTime;
+      const src = ctx.createBufferSource();
+      src.buffer = noise;
+      src.loop = true;
+      const f = ctx.createBiquadFilter();
+      f.type = 'highpass';
+      f.frequency.value = 900;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      // Swells in over a fifth of a second: unsettling, never a loud sting (product.md).
+      g.gain.exponentialRampToValueAtTime(0.11, t + 0.2);
+      g.gain.setValueAtTime(0.11, t + seconds * 0.6);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + seconds);
+      src.connect(f).connect(g).connect(master);
+      src.start(t);
+      src.stop(t + seconds + 0.05);
+    },
   };
 }

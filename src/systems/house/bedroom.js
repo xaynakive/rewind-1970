@@ -63,6 +63,8 @@ export function buildBedroom() {
       'under-bed': { pos: [-0.95, 0.01, -1.12], rotY: 0.15, maxStack: 3 },
       // On the floor in front of the open wardrobe, as if they fell out.
       wardrobe: { pos: [1.7, 0.01, -1.8], rotY: -0.3, maxStack: 4 },
+      // The previous resident's tape, on top of the wardrobe, where you'd only look up to find it.
+      'house-wardrobe': { pos: [1.8, 2.11, -2.5], rotY: -0.3, maxStack: 1 },
     },
     hotspots: [],
     sky: PALETTE.night,

@@ -35,6 +35,32 @@ export class MeshBuilder {
     return this.tri(a, c, d, color, emissive);
   }
 
+  /**
+   * A quad split into nu x nv cells, so per-vertex light (a flashlight, a lantern)
+   * can fall across it instead of only lighting its corners.
+   */
+  quadGrid(a, b, c, d, nu, nv, color, emissive = 0) {
+    const at = (u, v) => [0, 1, 2].map((i) => {
+      const ab = a[i] + (b[i] - a[i]) * u;
+      const dc = d[i] + (c[i] - d[i]) * u;
+      return ab + (dc - ab) * v;
+    });
+    for (let i = 0; i < nu; i++) {
+      for (let j = 0; j < nv; j++) {
+        const u0 = i / nu, u1 = (i + 1) / nu, v0 = j / nv, v1 = (j + 1) / nv;
+        this.quad(at(u0, v0), at(u1, v0), at(u1, v1), at(u0, v1), color, emissive);
+      }
+    }
+    return this;
+  }
+
+  /** Appends another builder's triangles. */
+  append(other) {
+    for (const v of other.data) this.data.push(v);
+    this.triangles += other.triangles;
+    return this;
+  }
+
   /** Axis-aligned box. `skip` lists faces to leave out: 'px','nx','py','ny','pz','nz'. */
   box([cx, cy, cz], [sx, sy, sz], color, emissive = 0, skip = []) {
     const x0 = cx - sx / 2, x1 = cx + sx / 2;

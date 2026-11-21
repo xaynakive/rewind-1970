@@ -27,8 +27,18 @@ export function createPlayback(dialog, { onClose }) {
   const note = dialog.querySelector('.playback-note');
   const noise = dialog.querySelector('.playback-noise');
   const nctx = noise.getContext('2d');
+  const enterButton = dialog.querySelector('[data-action="enter"]');
   let raf = 0;
   let current = null;
+  /** Set while a tape that can be walked into is playing (spec: memories, Requirement 1.1). */
+  let onEnter = null;
+  enterButton.addEventListener('click', () => {
+    const go = onEnter;
+    onEnter = null;
+    if (current) current.entering = true;
+    dialog.close();
+    go?.();
+  });
 
   dialog.querySelector('[data-action="eject"]').addEventListener('click', () => dialog.close());
   dialog.addEventListener('close', () => {
@@ -58,9 +68,13 @@ export function createPlayback(dialog, { onClose }) {
 
     /**
      * @param {{id:string,label:string,text:string,createdAt:number}} tape
-     * @param {{ level: number, rewound: boolean, reduce: boolean }} opts
+     * @param {{ level: number, rewound: boolean, reduce: boolean, note?: string, enter?: () => void }} opts
+     *   note: replaces the usual line under the text (used by the house's tapes)
+     *   enter: shows "step inside", which closes the tape and calls this
      */
-    open(tape, { level, rewound, reduce }) {
+    open(tape, { level, rewound, reduce, note: customNote, enter }) {
+      onEnter = enter ?? null;
+      enterButton.hidden = !enter;
       const d = rewound ? 0 : Math.max(0, Math.min(1, level / MAX_DECAY));
       const stage = rewound ? 'clean' : decayStage(level);
       current = { tapeId: tape.id, rewound };
@@ -84,11 +98,13 @@ export function createPlayback(dialog, { onClose }) {
         text.append(span);
       }
 
-      note.textContent = rewound
-        ? 'rewound. as clear as the night you recorded it.'
-        : stage === 'clean'
-          ? "it's still clear. for now."
-          : 'rewind it on the tv before it fades.';
+      let line;
+      if (customNote) line = customNote;
+      else if (rewound && tape.house) line = 'rewound. the end of the tape is clear now.';
+      else if (rewound) line = 'rewound. as clear as the night you recorded it.';
+      else if (stage === 'clean') line = "it's still clear. for now.";
+      else line = 'rewind it on the tv before it fades.';
+      note.textContent = line;
 
       // Capped so a fully decayed tape is still partly readable (decay spec, Req. 1.3).
       const amount = 0.03 + 0.2 * d;

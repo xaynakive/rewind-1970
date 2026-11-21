@@ -8,9 +8,10 @@ export const MIN_TAPES = 5;
 export const FINAL_LABEL = '10-31-70';
 export const MAX_FRAGMENTS = 5;
 
-/** @typedef {'still-water' | 'kept' | 'tracking' | 'static'} EndingId */
+/** @typedef {'found' | 'still-water' | 'kept' | 'tracking' | 'static'} EndingId */
 
 export const ENDING_TITLES = {
+  found: 'found',
   'still-water': 'still water',
   kept: 'kept',
   tracking: 'tracking',
@@ -18,10 +19,11 @@ export const ENDING_TITLES = {
 };
 
 /** How damaged the final tape looks for each ending (0..1). */
-export const ENDING_DECAY = { 'still-water': 0.1, kept: 0.1, tracking: 0.4, static: 0.8 };
+export const ENDING_DECAY = { found: 0.05, 'still-water': 0.1, kept: 0.1, tracking: 0.4, static: 0.8 };
 
 /** Closing lines. Warm, uneasy or broken; never explains the date. */
 const OUTRO = {
+  found: ['you found her.', "she isn't in the water anymore.", "she's on a tape, where she wanted to be."],
   kept: ['you kept them.', 'the house will keep them too.'],
   'still-water': ['you kept them.', 'you saw what was under the water.', 'it was only waiting to be remembered.'],
   tracking: ['some of them are slipping.', 'you can still catch them.'],
@@ -44,8 +46,9 @@ export function healthyShare(tapes, now, timeScale = 1) {
 }
 
 /** @returns {EndingId} */
-export function chooseEnding(tapes, now, pondNoticed, timeScale = 1) {
+export function chooseEnding(tapes, now, pondNoticed, timeScale = 1, mysterySolved = false) {
   const share = healthyShare(tapes, now, timeScale);
+  if (mysterySolved && share >= 0.4) return 'found';
   if (pondNoticed && share >= 0.8) return 'still-water';
   if (share >= 0.8) return 'kept';
   if (share < 0.4) return 'static';

@@ -17,6 +17,8 @@ export function loadSettings() {
     demoTime: false,
     clearPicture: prefersContrast,
     brightness: prefersContrast ? 85 : BRIGHTNESS_DEFAULT,
+    // Memories: the presence never chases (spec: memories, Requirement 5.6).
+    storyMode: false,
   };
   try {
     const saved = JSON.parse(localStorage.getItem(KEY) ?? '{}');

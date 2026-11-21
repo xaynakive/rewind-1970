@@ -61,7 +61,15 @@ export function buildFrontYard() {
 
   buildRain(mb, 380, 7);
 
+  // The previous resident's tapes (systems/mystery). Single-tape spots, apart from the user's piles.
+  const houseMailbox = [1.98, 0.01, 7.35];
+  // In the grass between the graves, close enough to read from the graves viewpoint.
+  const houseGrave = [-3.75, 0.02, 0.0];
+  const housePond = [POND.x + 0.5, WATER_Y + 0.05, POND.z + 0.3];
   const spots = {
+    'house-mailbox': { pos: houseMailbox, rotY: face(houseMailbox, CAM.gate), maxStack: 1 },
+    'house-grave': { pos: houseGrave, rotY: face(houseGrave, CAM.graves), maxStack: 1 },
+    'house-pond': { pos: housePond, rotY: face(housePond, CAM.pond), maxStack: 1 },
     mailbox: mailboxSpot,
     pond: pondSpot,
     'grave-1': graveSpots[0],

@@ -9,15 +9,25 @@
  *   listTapes: () => Promise<object[]>,
  *   deleteAll: () => Promise<void>,
  *   writeTape: () => void,
+ *   listHouseTapes?: () => object[],
+ *   caseAvailable?: () => boolean,
+ *   openCase?: () => void,
  * }} opts
  */
-export function createSettingsPanel(dialog, { settings, onChange, listTapes, deleteAll, writeTape }) {
+export function createSettingsPanel(dialog, {
+  settings, onChange, listTapes, deleteAll, writeTape,
+  listHouseTapes = () => [], caseAvailable = () => false, openCase = () => {},
+}) {
   const reduce = dialog.querySelector('[name="reduceFlashing"]');
   const sound = dialog.querySelector('[name="sound"]');
   const demo = dialog.querySelector('[name="demoTime"]');
   const brightness = dialog.querySelector('[name="brightness"]');
   const clear = dialog.querySelector('[name="clearPicture"]');
+  const story = dialog.querySelector('[name="storyMode"]');
   const list = dialog.querySelector('.reader-list');
+  const houseList = dialog.querySelector('.house-list');
+  const houseHeading = dialog.querySelector('.house-heading');
+  const caseButton = dialog.querySelector('[data-action="case"]');
   const status = dialog.querySelector('.settings-status');
 
   // Live while dragging, so you can see the room brighten behind the panel.
@@ -26,11 +36,17 @@ export function createSettingsPanel(dialog, { settings, onChange, listTapes, del
   reduce.addEventListener('change', () => onChange({ ...settings, reduceFlashing: reduce.checked }));
   sound.addEventListener('change', () => onChange({ ...settings, sound: sound.checked }));
   demo.addEventListener('change', () => onChange({ ...settings, demoTime: demo.checked }));
+  story.addEventListener('change', () => onChange({ ...settings, storyMode: story.checked }));
 
   dialog.querySelector('[data-action="close"]').addEventListener('click', () => dialog.close());
   dialog.querySelector('[data-action="write"]').addEventListener('click', () => {
     dialog.close();
     writeTape();
+  });
+
+  caseButton.addEventListener('click', () => {
+    dialog.close();
+    openCase();
   });
 
   dialog.querySelector('[data-action="export"]').addEventListener('click', async () => {
@@ -51,7 +67,30 @@ export function createSettingsPanel(dialog, { settings, onChange, listTapes, del
     await renderList();
   });
 
+  function tapeItem(t) {
+    const li = document.createElement('li');
+    const head = document.createElement('p');
+    head.className = 'reader-label';
+    head.textContent = t.label;
+    const date = document.createElement('time');
+    date.dateTime = new Date(t.createdAt).toISOString();
+    date.textContent = t.house ? new Date(t.createdAt).toLocaleDateString() : new Date(t.createdAt).toLocaleString();
+    const body = document.createElement('p');
+    body.className = 'reader-text';
+    body.textContent = t.text; // original text: never decayed here
+    li.append(head, date, body);
+    return li;
+  }
+
+  function renderHouse() {
+    const found = listHouseTapes();
+    houseHeading.hidden = houseList.hidden = found.length === 0;
+    houseList.replaceChildren(...found.map(tapeItem));
+    caseButton.hidden = !caseAvailable();
+  }
+
   async function renderList() {
+    renderHouse();
     const tapes = await listTapes();
     list.replaceChildren();
     if (tapes.length === 0) {
@@ -61,20 +100,7 @@ export function createSettingsPanel(dialog, { settings, onChange, listTapes, del
       list.append(empty);
       return;
     }
-    for (const t of tapes) {
-      const li = document.createElement('li');
-      const head = document.createElement('p');
-      head.className = 'reader-label';
-      head.textContent = t.label;
-      const date = document.createElement('time');
-      date.dateTime = new Date(t.createdAt).toISOString();
-      date.textContent = new Date(t.createdAt).toLocaleString();
-      const body = document.createElement('p');
-      body.className = 'reader-text';
-      body.textContent = t.text; // original text: never decayed here
-      li.append(head, date, body);
-      list.append(li);
-    }
+    for (const t of tapes) list.append(tapeItem(t));
   }
 
   return {
@@ -82,6 +108,7 @@ export function createSettingsPanel(dialog, { settings, onChange, listTapes, del
       reduce.checked = settings.reduceFlashing;
       sound.checked = settings.sound;
       demo.checked = settings.demoTime;
+      story.checked = settings.storyMode;
       brightness.value = String(settings.brightness);
       clear.checked = settings.clearPicture;
       status.textContent = '';

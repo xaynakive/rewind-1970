@@ -1,0 +1,16 @@
+{
+  "version": "v1",
+  "hooks": [
+    {
+      "name": "check-before-done",
+      "description": "Before the agent ends its turn: every module must parse and every test must pass. On failure the agent keeps working.",
+      "enabled": true,
+      "trigger": "Stop",
+      "action": {
+        "type": "command",
+        "command": "for f in $(find src -name '*.js'); do node --check \"$f\" || { echo \"syntax error in $f\" >&2; exit 1; }; done; npm test --silent > /tmp/rewind-tests.log 2>&1 || { tail -n 30 /tmp/rewind-tests.log >&2; exit 1; }"
+      },
+      "timeout": 180
+    }
+  ]
+}

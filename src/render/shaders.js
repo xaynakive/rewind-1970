@@ -84,6 +84,8 @@ void main() {
   if (rain) {
     vColor = aColor * (0.3 + 1.2 * uFlash);
     vFog = clamp((distance(p, uCamPos) - uFog.x) / (uFog.y - uFog.x), 0.0, 1.0);
+    // A streak right next to the camera would fill the screen: drop it.
+    if (distance(p.xz, uCamPos.xz) < 1.6) gl_Position = vec4(2.0, 2.0, 2.0, 1.0);
     return;
   }
   if (water || beneath) {

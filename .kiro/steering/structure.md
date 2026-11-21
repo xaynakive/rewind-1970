@@ -12,11 +12,13 @@ rewind-1970/
 │   └── hooks/           # agent hooks: tests on save, spec sync, checks before the agent stops
 ├── index.html           # stage, dialogs (tape writer, settings, playback, case, memory pause and notes)
 ├── style.css
+├── haewol/             # the second game, Haewol: index.html and haewol.css (spec: .kiro/specs/haewol)
 ├── package.json         # scripts only: test, serve. No dependencies.
 ├── LICENSE              # MIT
 ├── src/
 │   ├── main.js          # boot and wiring: cold open -> house, moving, tapes, rewind, settings
 │   ├── core/            # settings, hashing / seeded random
+│   ├── night/           # Haewol: boot, the loop clock, the save, the lens, the village, the running night, its HUD
 │   ├── render/          # renderer, shaders, mesh builder, matrix math, bitmap font
 │   ├── systems/
 │   │   ├── cold-open/
@@ -37,5 +39,5 @@ rewind-1970/
     └── writeup.md       # hackathon write-up: how Kiro was used
 ```
 
-- One spec folder in `.kiro/specs/` per folder in `src/systems/`.
+- One spec folder in `.kiro/specs/` per folder in `src/systems/`, plus `haewol/` for `src/night/`.
 - When code changes a behaviour described in a spec, update the spec in the same change, and tick the task in `tasks.md`.

@@ -28,6 +28,8 @@ Each memory the user writes is stored as a VHS tape. Tapes are hidden at places 
 2. IF every hiding spot holds a tape THEN the system SHALL stack the new tape at the spot holding the fewest tapes.
 3. The system SHALL choose the hiding spot with a deterministic function of the tape id, so that the same tape always goes to the same spot after reload.
 4. WHEN the tape is hidden THEN the system SHALL show a short diegetic hint, for example "you hear something fall upstairs", and SHALL NOT state the exact spot.
+5. WHEN a hiding spot holds more than one tape THEN the system SHALL show them as a pile, and selecting the pile SHALL pick up the top tape.
+6. WHEN the user picks up a tape while already holding another THEN the system SHALL slide the held tape under its own pile, so the user can reach every tape in a pile by picking repeatedly.
 
 ### Requirement 3: Find and read a tape
 **User story:** As a user, I want to find tapes and read them.
@@ -36,6 +38,7 @@ Each memory the user writes is stored as a VHS tape. Tapes are hidden at places 
 1. WHEN the user's view is at a hiding spot that holds a tape THEN the system SHALL show the tape as an object the user can select.
 2. WHEN the user selects a tape THEN the system SHALL mark it found and show its label and its text rendered with its current decay level.
 3. WHEN a tape is read THEN the system SHALL NOT change `lastViewedAt`. Only rewinding restores a tape.
+4. WHEN the user closes a tape they picked up THEN the system SHALL keep it in the user's hands (shown on the on-screen display) until it is rewound or swapped. A held tape is not saved: reloading the app puts it back in its pile.
 
 ### Requirement 4: Rewind a tape
 **User story:** As a user, I want to rewind a tape on the TV, so that I can restore a memory that is fading.

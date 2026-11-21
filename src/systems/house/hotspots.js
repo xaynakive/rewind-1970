@@ -1,33 +1,80 @@
 // Selectable objects are real <button>s positioned over the 3D object each
 // frame. That gives click, tap, keyboard focus and screen-reader labels
-// without ray casting.
+// without ray casting. Hotspots can be pressed and held (for rewinding).
 
 import { transformPoint } from '../../render/math.js';
 
-export function createHotspotLayer(container, hotspots, onSelect) {
-  const items = hotspots.map((h, i) => {
+/**
+ * @param {HTMLElement} container
+ * @param {{
+ *   onSelect: (id: string) => void,
+ *   onPress?: (id: string) => void,
+ *   onRelease?: (id: string) => void,
+ * }} handlers
+ */
+export function createHotspotLayer(container, { onSelect, onPress, onRelease }) {
+  /** @type {Map<string, {h: object, button: HTMLButtonElement, tag: HTMLElement, corners: number[][]}>} */
+  const items = new Map();
+
+  function make(h) {
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'hotspot';
     button.dataset.id = h.id;
-    button.setAttribute('aria-label', h.label);
-    // Earlier hotspots stack on top, so list small objects before large ones.
-    button.style.zIndex = String(hotspots.length - i);
     const tag = document.createElement('span');
     tag.className = 'hotspot-label';
-    tag.textContent = h.label;
     button.append(tag);
+
+    let pressed = false;
+    const press = () => { if (!pressed) { pressed = true; onPress?.(h.id); } };
+    const release = () => { if (pressed) { pressed = false; onRelease?.(h.id); } };
+
     button.addEventListener('click', () => onSelect(h.id));
+    button.addEventListener('pointerdown', (e) => {
+      if (e.button !== 0) return;
+      // Keep the pointer on this button while held, and don't start a look-drag.
+      button.setPointerCapture?.(e.pointerId);
+      e.stopPropagation();
+      press();
+    });
+    button.addEventListener('pointerup', release);
+    button.addEventListener('pointercancel', release);
+    button.addEventListener('lostpointercapture', release);
+    button.addEventListener('keydown', (e) => {
+      if ((e.key === ' ' || e.key === 'Enter') && !e.repeat) press();
+    });
+    button.addEventListener('keyup', (e) => {
+      if (e.key === ' ' || e.key === 'Enter') release();
+    });
+    button.addEventListener('blur', release);
+    button.addEventListener('contextmenu', (e) => e.preventDefault());
+
     container.append(button);
-    return { h, button, corners: corners(h.min, h.max) };
-  });
+    return { h, button, tag, corners: [] };
+  }
 
   return {
+    /** Replaces the hotspot list. Earlier entries stack on top: list small objects first. */
+    set(list) {
+      const keep = new Set(list.map((h) => h.id));
+      for (const [id, item] of items) {
+        if (!keep.has(id)) { item.button.remove(); items.delete(id); }
+      }
+      list.forEach((h, i) => {
+        const item = items.get(h.id) ?? make(h);
+        item.h = h;
+        item.corners = corners(h.min, h.max);
+        item.button.setAttribute('aria-label', h.label);
+        item.tag.textContent = h.tag ?? h.label;
+        item.button.style.zIndex = String(list.length - i);
+        items.set(h.id, item);
+      });
+    },
     setEnabled(on) {
       container.hidden = !on;
     },
     update(viewProj, width, height) {
-      for (const { button, corners: cs } of items) {
+      for (const { button, corners: cs } of items.values()) {
         let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
         let behind = false;
         for (const c of cs) {

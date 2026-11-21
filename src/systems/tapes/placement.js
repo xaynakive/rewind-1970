@@ -1,6 +1,10 @@
 // Choosing where a tape hides. Pure and deterministic.
 // Spec: .kiro/specs/tapes (Requirement 2)
 
+import { fnv1a } from '../../core/hash.js';
+
+export { fnv1a };
+
 /** Hiding spots and the area each one belongs to. */
 export const SPOTS = [
   { id: 'under-bed', area: 'bedroom' },
@@ -14,16 +18,6 @@ export const SPOTS = [
   { id: 'tv-cabinet', area: 'living-room' },
   { id: 'attic-hatch', area: 'hallway' },
 ];
-
-/** 32-bit FNV-1a hash. */
-export function fnv1a(str) {
-  let h = 0x811c9dc5;
-  for (let i = 0; i < str.length; i++) {
-    h ^= str.charCodeAt(i);
-    h = Math.imul(h, 0x01000193) >>> 0;
-  }
-  return h >>> 0;
-}
 
 /**
  * @param {string} tapeId

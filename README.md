@@ -8,16 +8,21 @@ The tape opens on a date that shouldn't exist: **October 31, 1970, 00:00**, year
 
 Spooky, never gore. Your memories never leave your device.
 
-## Status: milestone 1
+## Status: milestone 2
 
 Working now:
 - Cold open: a found-tape boot screen in a pixel VCR font, with tracking lines, colour bleed and grain.
 - The living room in a low-poly PS1 style: wobbling vertices, a 320×240 render, dithering, fog, a flickering CRT and candle-lit pumpkins.
 - A storm outside: lightning through the window and synthesized thunder, rain and tape hiss.
 - Recording tapes at the VCR. Each tape is stored in IndexedDB and hidden at one of 10 spots, with a quiet hint about where it went.
-- Settings: reduce flashing, sound, a text-only reader for every tape, export to JSON, erase all.
+- **Finding tapes.** Cassettes sit in piles at their hiding spots. Their spine labels yellow and then bleed red as they decay, so you can see which ones need you.
+- **Decay.** A neglected tape plays back damaged: colours bleed, static rises, the tracking jitters, and up to 1 in 5 words drift out of place. The memory itself is never changed.
+- **Rewinding.** Carry a tape to the TV and hold for 2 seconds (mouse, touch or keyboard). It plays back clean and returns to the top of its pile.
+- Settings: reduce flashing, sound, demo time (one minute counts as one day, to watch decay happen), a text-only reader for every tape, export to JSON, erase all.
 
-Next: the rest of the house, finding tapes, decay effects, rewinding, the pond, and the endings. See `.kiro/specs/*/tasks.md`.
+For now only the living room exists, so only tapes hidden in the TV cabinet can be found. Tapes hidden elsewhere will appear when their rooms are built.
+
+Next: the rest of the house, the pond, and the endings. See `.kiro/specs/*/tasks.md`.
 
 ## Run locally
 

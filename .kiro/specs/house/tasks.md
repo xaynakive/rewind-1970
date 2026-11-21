@@ -8,7 +8,7 @@
   - [ ] Click/tap destinations, WASD/arrows (needs task 1).
   - _Requirements: 1.2, 1.3, 1.5_
 - [x] 3. Living room (first area)
-  - TV, VCR with a red 00:00 clock, cabinet, sofa, rug, pumpkins, and a window onto the storm. TV and VCR are hotspots.
+  - TV, VCR with a red 00:00 clock, a cabinet with two open shelves (the `tv-cabinet` hiding spot), sofa, rug, pumpkins, and a window onto the storm. TV and VCR are hotspots.
   - _Requirements: 2.1_
 - [ ] 4. Remaining areas: hallway, messy room, bedroom, front yard
   - Area loader with disposal.

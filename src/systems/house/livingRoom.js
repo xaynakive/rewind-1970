@@ -26,6 +26,7 @@ const W = 6, H = 2.6, D = 6;
 const TV = { center: [0, 1.08, -2.55], size: [0.9, 0.7, 0.6] };
 const VCR = { center: [0, 0.67, -2.45], size: [0.7, 0.12, 0.4] };
 const CABINET = { center: [0, 0.3, -2.5], size: [1.4, 0.6, 0.6] };
+const SHELF_BASE = 0.08; // height of the shelf floor above the ground
 
 export function buildLivingRoom() {
   const mb = new MeshBuilder();
@@ -37,7 +38,7 @@ export function buildLivingRoom() {
   mb.quad([-1.4, 0.005, -1.6], [1.4, 0.005, -1.6], [1.4, 0.005, 0.8], [-1.4, 0.005, 0.8], rug);
 
   // TV on its cabinet, VCR between.
-  mb.box(CABINET.center, CABINET.size, PALETTE.rotWood);
+  buildCabinet(mb);
   mb.box(VCR.center, VCR.size, plastic);
   // Details sit 1 cm proud of their surface: closer than that z-fights in a 16-bit depth buffer.
   mb.quad([0.14, 0.655, -2.24], [0.3, 0.655, -2.24], [0.3, 0.69, -2.24], [0.14, 0.69, -2.24], PALETTE.bloodMoon, 1); // VCR clock: 00:00
@@ -72,7 +73,13 @@ export function buildLivingRoom() {
   return {
     meshData: mb.build(),
     triangles: mb.triangles,
-    viewpoint: { position: [0.35, 1.45, 2.3], lookAt: [0, 0.95, -2.5] },
+    viewpoint: { position: [0.3, 1.38, 1.4], lookAt: [0, 0.85, -2.5] },
+    /** Hiding spots in this area (ids from systems/tapes/placement.js). Tapes rest on top. */
+    spots: {
+      // On the floor of the cabinet's right-hand shelf, spines facing the room.
+      // maxStack: how many cassettes fit on the shelf before they'd hit the top board.
+      'tv-cabinet': { pos: [0.35, SHELF_BASE + 0.01, -2.33], maxStack: 6 },
+    },
     sky: PALETTE.night,
     flashDir: [1, 0, 0],
     fogColor: PALETTE.void,
@@ -94,6 +101,31 @@ export function buildLivingRoom() {
       ];
     },
   };
+}
+
+/** Cabinet with two open shelves facing the room. Tapes hide in the right one. */
+function buildCabinet(mb) {
+  const [cx, cy, cz] = CABINET.center;
+  const [sx, sy, sz] = CABINET.size;
+  const x0 = cx - sx / 2, x1 = cx + sx / 2;
+  const y0 = cy - sy / 2, y1 = cy + sy / 2;
+  const z0 = cz - sz / 2, z1 = cz + sz / 2;
+  const t = 0.04; // board thickness
+  const wood = PALETTE.rotWood;
+  const inside = shade(PALETTE.rotWood, 0.35);
+
+  mb.box([cx, y1 - t / 2, cz], [sx, t, sz], wood);                  // top
+  mb.box([cx, y0 + SHELF_BASE / 2, cz], [sx, SHELF_BASE, sz], wood); // plinth / shelf floor
+  mb.box([x0 + t / 2, cy, cz], [t, sy, sz], wood);                  // left side
+  mb.box([x1 - t / 2, cy, cz], [t, sy, sz], wood);                  // right side
+  mb.box([cx, cy, cz], [t, sy, sz], wood);                          // divider
+  mb.box([cx, cy, z0 + t / 2], [sx, sy, t], inside);                // back panel
+  // Darker inner floor and underside of the top, so the shelves read as hollow.
+  // (1 cm offsets: anything closer z-fights in the 16-bit depth buffer.)
+  const fy = y0 + SHELF_BASE + 0.01;
+  const ty = y1 - t - 0.01;
+  mb.quad([x0 + t, fy, z0 + t], [x1 - t, fy, z0 + t], [x1 - t, fy, z1], [x0 + t, fy, z1], inside);
+  mb.quad([x0 + t, ty, z0 + t], [x1 - t, ty, z0 + t], [x1 - t, ty, z1], [x0 + t, ty, z1], shade(inside, 0.6));
 }
 
 function bounds({ center, size }, pad) {

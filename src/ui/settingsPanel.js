@@ -14,11 +14,13 @@
 export function createSettingsPanel(dialog, { settings, onChange, listTapes, deleteAll, writeTape }) {
   const reduce = dialog.querySelector('[name="reduceFlashing"]');
   const sound = dialog.querySelector('[name="sound"]');
+  const demo = dialog.querySelector('[name="demoTime"]');
   const list = dialog.querySelector('.reader-list');
   const status = dialog.querySelector('.settings-status');
 
   reduce.addEventListener('change', () => onChange({ ...settings, reduceFlashing: reduce.checked }));
   sound.addEventListener('change', () => onChange({ ...settings, sound: sound.checked }));
+  demo.addEventListener('change', () => onChange({ ...settings, demoTime: demo.checked }));
 
   dialog.querySelector('[data-action="close"]').addEventListener('click', () => dialog.close());
   dialog.querySelector('[data-action="write"]').addEventListener('click', () => {
@@ -74,6 +76,7 @@ export function createSettingsPanel(dialog, { settings, onChange, listTapes, del
     async open() {
       reduce.checked = settings.reduceFlashing;
       sound.checked = settings.sound;
+      demo.checked = settings.demoTime;
       status.textContent = '';
       await renderList();
       dialog.showModal();

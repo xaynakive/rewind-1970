@@ -49,6 +49,7 @@
     <h2 id="settings-title">settings</h2>
     <label class="toggle"><input type="checkbox" name="reduceFlashing"> reduce flashing</label>
     <label class="toggle"><input type="checkbox" name="sound"> sound</label>
+    <label class="toggle"><input type="checkbox" name="demoTime"> demo time: one minute is one day <span class="toggle-note">(tapes decay much faster)</span></label>
 
     <h3>tapes (text only)</h3>
     <ul class="reader-list"></ul>
@@ -60,6 +61,18 @@
     <p class="settings-status" role="status"></p>
     <div class="actions">
       <button type="button" data-action="close">close</button>
+    </div>
+  </dialog>
+
+  <dialog id="playback" class="panel playback" aria-labelledby="playback-label">
+    <canvas class="playback-noise" width="160" height="120" aria-hidden="true"></canvas>
+    <p class="playback-osd" aria-hidden="true"><span class="playback-state">PLAY</span><span class="playback-tracking"></span></p>
+    <h2 id="playback-label" class="playback-label"></h2>
+    <time class="playback-date"></time>
+    <div class="playback-text" tabindex="-1" autofocus></div>
+    <p class="playback-note" role="status"></p>
+    <div class="actions">
+      <button type="button" data-action="eject">eject</button>
     </div>
   </dialog>
 

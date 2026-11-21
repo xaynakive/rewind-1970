@@ -53,6 +53,8 @@ body {
   left: 0;
   top: 0;
   pointer-events: auto;
+  touch-action: none;
+  -webkit-touch-callout: none;
   background: transparent;
   border: 1px dashed transparent;
   padding: 0;
@@ -192,6 +194,78 @@ body {
 }
 .no-webgl[hidden] { display: none; }
 
+.toggle-note { opacity: 0.55; font-size: 0.8rem; }
+
+/* ---------- playback (a tape playing, with its decay) ---------- */
+
+.playback {
+  --decay: 0;
+  position: relative;
+  width: min(92vw, 620px);
+  background: #050608;
+  border-color: #2f4a42;
+  isolation: isolate;
+}
+.playback-noise {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  image-rendering: pixelated;
+  mix-blend-mode: screen;
+  z-index: 2;
+}
+.playback-osd {
+  display: flex;
+  justify-content: space-between;
+  margin: 0 0 0.8rem;
+  font-size: 0.8rem;
+  letter-spacing: 0.2em;
+  color: var(--crt-glow);
+}
+.playback-tracking { color: #e2786f; }
+.playback-label {
+  margin: 0;
+  font-size: 1.15rem;
+  letter-spacing: 0.08em;
+  text-transform: lowercase;
+}
+.playback-date { display: block; font-size: 0.75rem; opacity: 0.55; margin: 0.2rem 0 1rem; }
+.playback-text {
+  max-height: 46dvh;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.7;
+  font-size: 1.05rem;
+  padding: 0.2rem 0.1rem 0.6rem;
+  outline: none;
+  /* Colour bleed and softness grow with decay. */
+  text-shadow:
+    calc(var(--decay) * 2.5px) 0 rgba(255, 40, 80, calc(var(--decay) * 0.6)),
+    calc(var(--decay) * -2.5px) 0 rgba(60, 255, 220, calc(var(--decay) * 0.45));
+  filter: blur(calc(var(--decay) * 0.35px));
+  color: color-mix(in srgb, var(--tape-label), #a08466 calc(var(--decay) * 55%));
+}
+.playback-text span {
+  display: inline-block;
+  max-width: 100%;
+  white-space: pre-wrap;
+}
+.playback:not(.reduce)[data-stage="damaged"] .playback-text,
+.playback:not(.reduce)[data-stage="fading"] .playback-text {
+  animation: tracking-jitter 2.6s steps(1) infinite;
+}
+@keyframes tracking-jitter {
+  0%, 100% { transform: none; }
+  37% { transform: translateX(calc(var(--decay) * 5px)); }
+  39% { transform: none; }
+  71% { transform: translateX(calc(var(--decay) * -7px)) skewX(calc(var(--decay) * 4deg)); }
+  73% { transform: none; }
+}
+.playback-note { font-size: 0.85rem; font-style: italic; opacity: 0.75; margin: 0.6rem 0 0; }
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -206,5 +280,6 @@ body {
 
 @media (prefers-reduced-motion: reduce) {
   .rec { animation: none; }
+  .playback-text { animation: none !important; }
   .hint { transition: none; }
 }

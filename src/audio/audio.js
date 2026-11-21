@@ -67,6 +67,48 @@ export function createAudio() {
       src.stop(t + 3.8);
     },
 
+    /**
+     * Rewind whirr: a motor that spins up while the tape rewinds.
+     * Returns a function that stops it.
+     */
+    whirr(durationMs) {
+      if (!ctx) return () => {};
+      const t = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(90, t);
+      osc.frequency.exponentialRampToValueAtTime(520, t + durationMs / 1000);
+      const f = ctx.createBiquadFilter();
+      f.type = 'bandpass';
+      f.frequency.value = 900;
+      f.Q.value = 0.7;
+      const hiss = ctx.createBufferSource();
+      hiss.buffer = noise;
+      hiss.loop = true;
+      const hf = ctx.createBiquadFilter();
+      hf.type = 'highpass';
+      hf.frequency.value = 3000;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.05, t + 0.15);
+      osc.connect(f).connect(g);
+      hiss.connect(hf).connect(g);
+      g.connect(master);
+      osc.start(t);
+      hiss.start(t);
+      let stopped = false;
+      return () => {
+        if (stopped) return;
+        stopped = true;
+        const now = ctx.currentTime;
+        g.gain.cancelScheduledValues(now);
+        g.gain.setValueAtTime(Math.max(g.gain.value, 0.0001), now);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 0.12);
+        osc.stop(now + 0.15);
+        hiss.stop(now + 0.15);
+      };
+    },
+
     /** Mechanical clunk and motor whine when a tape starts. */
     tapeStart() {
       if (!ctx) return;

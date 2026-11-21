@@ -9,5 +9,9 @@ export function createHint(element) {
       element.classList.add('visible');
       timer = setTimeout(() => element.classList.remove('visible'), ms);
     },
+    hide() {
+      clearTimeout(timer);
+      element.classList.remove('visible');
+    },
   };
 }

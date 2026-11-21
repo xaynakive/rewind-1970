@@ -5,7 +5,10 @@ export function createAudio() {
   let ctx = null;
   let master = null;
   let noise = null;
+  let rain = null;
+  let rainLevel = 1;
   let enabled = true;
+  const RAIN_GAIN = 0.07;
 
   function noiseBuffer(seconds) {
     const buf = ctx.createBuffer(1, ctx.sampleRate * seconds, ctx.sampleRate);
@@ -40,8 +43,14 @@ export function createAudio() {
       master.gain.value = enabled ? 0.8 : 0;
       master.connect(ctx.destination);
       noise = noiseBuffer(2);
-      loop('lowpass', 900, 0.05);    // rain on the roof
+      rain = loop('lowpass', 900, RAIN_GAIN * rainLevel); // rain
       loop('highpass', 5200, 0.012); // tape hiss
+    },
+
+    /** Rain loudness: 1 outdoors, lower indoors. Fades over about a second. */
+    setRain(level) {
+      rainLevel = level;
+      if (rain) rain.gain.setTargetAtTime(RAIN_GAIN * level, ctx.currentTime, 0.4);
     },
 
     setEnabled(on) {

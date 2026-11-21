@@ -2,7 +2,7 @@
 // as they decay, so you can see from across the room which ones need you.
 // Spec: .kiro/specs/decay (Requirement 3.3), tapes (Requirement 3.1)
 
-import { MeshBuilder, hexToRgb } from '../../render/mesh.js';
+import { MeshBuilder, hexToRgb, rotateY } from '../../render/mesh.js';
 import { MAX_DECAY } from '../decay/decay.js';
 
 const BODY = [0.07, 0.07, 0.08];
@@ -62,30 +62,39 @@ export function buildTapeMeshes(tapes, spots, levelOf) {
 
   for (const [spotId, unsorted] of bySpot) {
     const stack = sortStack(unsorted);
-    const base = spots[spotId].pos;
-    const maxStack = spots[spotId].maxStack ?? 8;
+    const { pos: base, maxStack = 8, rotY = 0 } = spots[spotId];
+    // Local pile coordinates (spine toward +z) -> world, turned by rotY.
+    const at = (local) => {
+      const r = rotateY(local, rotY);
+      return [base[0] + r[0], base[1] + r[1], base[2] + r[2]];
+    };
+    let topY = 0;
     let top = null;
     // Draw only the newest `maxStack` tapes; the rest are buried underneath.
     stack.slice(-maxStack).forEach((tape, n) => {
       const jitter = (n % 2 ? -1 : 1) * 0.012 * Math.min(n, 3);
-      const c = [base[0] + jitter, base[1] + SIZE[1] / 2 + n * STACK, base[2] + jitter * 0.5];
-      mb.box(c, SIZE, BODY);
+      const y = SIZE[1] / 2 + n * STACK;
+      mb.boxRot(at([jitter, y, jitter * 0.5]), SIZE, rotY, BODY);
       // Spine label, 1 cm proud of the front face to avoid z-fighting.
-      const z = c[2] + SIZE[2] / 2 + 0.01;
+      const z = jitter * 0.5 + SIZE[2] / 2 + 0.01;
       const hx = SIZE[0] * 0.4, hy = SIZE[1] * 0.32;
-      mb.quad([c[0] - hx, c[1] - hy, z], [c[0] + hx, c[1] - hy, z], [c[0] + hx, c[1] + hy, z], [c[0] - hx, c[1] + hy, z], labelColor(levelOf(tape)), 0.6);
-      top = { tape, c };
+      mb.quad(at([jitter - hx, y - hy, z]), at([jitter + hx, y - hy, z]), at([jitter + hx, y + hy, z]), at([jitter - hx, y + hy, z]), labelColor(levelOf(tape)), 0.6);
+      topY = y + SIZE[1] / 2;
+      top = tape;
     });
 
     // One hotspot per stack: it picks up the top tape. Its label counts all of them.
+    // Bounds are the axis-aligned box around the turned pile.
     const pad = 0.06;
+    const hx = SIZE[0] / 2 + pad, hz = SIZE[2] / 2 + pad;
+    const corners = [[-hx, 0, -hz], [hx, 0, -hz], [hx, 0, hz], [-hx, 0, hz]].map(at);
     const more = stack.length > 1 ? ` (${stack.length - 1} more under it)` : '';
     hotspots.push({
-      id: `tape:${top.tape.id}`,
-      label: `tape: ${top.tape.label}${more}`,
+      id: `tape:${top.id}`,
+      label: `tape: ${top.label}${more}`,
       tag: stack.length > 1 ? `tapes \u00d7${stack.length}` : 'tape',
-      min: [base[0] - SIZE[0] / 2 - pad, base[1] - 0.02, base[2] - SIZE[2] / 2 - pad],
-      max: [base[0] + SIZE[0] / 2 + pad, top.c[1] + SIZE[1] / 2 + 0.04, base[2] + SIZE[2] / 2 + pad],
+      min: [Math.min(...corners.map((c) => c[0])), base[1] - 0.02, Math.min(...corners.map((c) => c[2]))],
+      max: [Math.max(...corners.map((c) => c[0])), base[1] + topY + 0.04, Math.max(...corners.map((c) => c[2]))],
     });
   }
   return { meshData: mb.triangles ? mb.build() : null, hotspots };

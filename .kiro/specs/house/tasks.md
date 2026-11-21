@@ -1,22 +1,24 @@
 # Tasks: House
 
-- [ ] 1. Viewpoint graph and camera moves
-  - Graph data, validation test, eased camera moves, input locking during moves.
+- [x] 1. Viewpoint graph and camera moves
+  - Graph data in each area, validation and reachability tests, eased walks inside areas, glitch cuts between areas, input locked during moves.
   - _Requirements: 1.1, 1.4, 2.2_
-- [ ] 2. Desktop and touch input
+- [x] 2. Desktop and touch input
   - [x] Limited look: the mouse position steers the view, touch drag moves it (±35° / ±20°).
-  - [ ] Click/tap destinations, WASD/arrows (needs task 1).
+  - [x] Exit arrows (click or tap), W/A/S/D and arrow keys. On portrait phones the arrows sit outside the picture.
   - _Requirements: 1.2, 1.3, 1.5_
 - [x] 3. Living room (first area)
   - TV, VCR with a red 00:00 clock, a cabinet with two open shelves (the `tv-cabinet` hiding spot), sofa, rug, pumpkins, and a window onto the storm. TV and VCR are hotspots.
   - _Requirements: 2.1_
-- [ ] 4. Remaining areas: hallway, messy room, bedroom, front yard
-  - Area loader with disposal.
-  - _Requirements: 2.1, 2.3_
+- [x] 4. Remaining areas: hallway, messy room, bedroom, front yard
+  - Front yard (gate, graves, pond, porch), hallway (attic hatch, stairs), messy room (pumpkin pile), bedroom (under the bed, wardrobe). Every hiding spot is visible from a viewpoint (tested).
+  - Area loader that keeps neighbours loaded and frees the rest.
+  - _Requirements: 2.1, 2.2, 2.3_
 - [ ] 5. Rain and lightning
-  - [x] Lightning scheduler with unit tests, flash through the window, delayed thunder, reduce-flashing fade.
-  - [x] Rain and tape-hiss audio loops.
-  - [ ] Visible rain outside, quieter rain indoors.
+  - [x] Lightning scheduler with unit tests, flash, delayed thunder, reduce-flashing fade.
+  - [x] Rain and tape-hiss audio loops; rain is quieter indoors.
+  - [x] Visible rain outside.
+  - [ ] Rain visible through windows indoors.
   - [ ] Lightning-only objects.
   - _Requirements: 3.1, 3.2, 3.3, 3.4, 3.5_
 - [ ] 6. "Slightly wrong" changes

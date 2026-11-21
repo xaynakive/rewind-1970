@@ -6,7 +6,10 @@ import { createRenderer } from './render/renderer.js';
 import { perspective, lookAt, multiply } from './render/math.js';
 import { drawText } from './render/bitmapFont.js';
 import { createColdOpen } from './systems/cold-open/coldOpen.js';
-import { buildLivingRoom, PALETTE } from './systems/house/livingRoom.js';
+import { buildHouse } from './systems/house/areas.js';
+import { PALETTE } from './systems/house/palette.js';
+import { createAreaLoader } from './systems/house/areaLoader.js';
+import { startMove, cameraAt, directionForKey } from './systems/house/navigation.js';
 import { createLook, lookTarget } from './systems/house/look.js';
 import { createHotspotLayer } from './systems/house/hotspots.js';
 import { nextStrikeDelay, createStrike, flashIntensity, strikeLength } from './systems/house/lightning.js';
@@ -23,6 +26,7 @@ import { createTapeWriter } from './ui/tapeWriter.js';
 import { createSettingsPanel } from './ui/settingsPanel.js';
 import { createPlayback } from './ui/playback.js';
 import { createHint } from './ui/hint.js';
+import { createNavArrows } from './ui/navArrows.js';
 
 const $ = (sel) => document.querySelector(sel);
 const stage = $('#stage');
@@ -114,10 +118,21 @@ if (!renderer) {
 }
 
 function start(r) {
-  const room = buildLivingRoom();
-  const roomMesh = r.createMesh(room.meshData);
-  const proj = perspective((58 * Math.PI) / 180, 4 / 3, 0.1, 20);
+  const house = buildHouse();
+  const loader = createAreaLoader(r, house);
+  const FOV = (58 * Math.PI) / 180;
+  const projIndoors = perspective(FOV, 4 / 3, 0.1, 20);
+  const projOutdoors = perspective(FOV, 4 / 3, 0.15, 70);
   const look = createLook(stage);
+
+  /** Where the player stands, and the move in progress (if any). */
+  let view = house.viewpoints.get(house.start);
+  let move = null;
+  /** Area whose geometry is on screen. Changes mid-move on a cut. */
+  let shownArea = view.area;
+  let lastLookAt = null;
+  const visited = new Set();
+  const areaOf = (id) => house.areas.get(id);
 
   /** Id of the tape in the player's hands, or null. Not saved: a reload puts it back. */
   let carrying = null;
@@ -130,14 +145,68 @@ function start(r) {
 
   let tapeMesh = null;
   let lastTapeBuild = 0;
+  /** Tape piles and selectable props for the area on screen. */
   function rebuildTapes() {
+    const area = areaOf(shownArea);
     const visible = tapes.filter((t) => t.id !== carrying);
-    const built = buildTapeMeshes(visible, room.spots, levelOf);
+    const built = buildTapeMeshes(visible, area.spots, levelOf);
     if (tapeMesh) r.disposeMesh(tapeMesh);
     tapeMesh = built.meshData ? r.createMesh(built.meshData) : null;
-    hotspotLayer.set([...built.hotspots, ...room.hotspots]);
+    hotspotLayer.set([...built.hotspots, ...area.hotspots]);
     lastTapeBuild = performance.now();
   }
+
+  // ----- moving around -----
+
+  const nav = createNavArrows($('#nav'), (dir) => go(dir));
+  nav.hide();
+
+  function exitsOf(vp) {
+    const out = {};
+    for (const [dir, id] of Object.entries(vp.exits)) out[dir] = house.viewpoints.get(id).label;
+    return out;
+  }
+
+  function go(dir) {
+    if (mode.kind !== 'house' || move || busy || rewind.kind !== 'idle' || anyDialogOpen()) return;
+    const targetId = view.exits[dir];
+    if (!targetId) return;
+    // Start from where the player is actually looking, so the camera doesn't snap.
+    move = startMove({ ...view, lookAt: lastLookAt ?? view.lookAt }, house.viewpoints.get(targetId), performance.now());
+    nav.hide();
+    hotspotLayer.setEnabled(false); // input is locked while moving (house spec, Req. 1.4)
+    hint.hide();
+  }
+
+  /** Called when the camera switches to a new area (on arrival, or mid-cut). */
+  function showArea(areaId) {
+    shownArea = areaId;
+    loader.enter(areaId);
+    audio.setRain(areaOf(areaId).outdoors ? 1 : 0.3);
+    rebuildTapes();
+  }
+
+  function arrive(vp) {
+    view = vp;
+    move = null;
+    look.reset();
+    nav.show(exitsOf(vp));
+    hotspotLayer.setEnabled(true);
+    if (!visited.has(vp.id)) {
+      visited.add(vp.id);
+      const text = FIRST_VISIT[vp.id]?.(tapes);
+      if (text) setTimeout(() => { if (view === vp && !move && !anyDialogOpen()) hint.show(text); }, 600);
+    }
+  }
+
+  window.addEventListener('keydown', (e) => {
+    if (anyDialogOpen() || e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
+    const dir = directionForKey(e.key);
+    if (dir && mode.kind === 'house') {
+      e.preventDefault();
+      go(dir);
+    }
+  });
   tapeListeners.add(rebuildTapes);
 
   async function findTape(id) {
@@ -299,7 +368,8 @@ function start(r) {
 
   function enterHouse(now) {
     mode = { kind: 'house', since: now };
-    hotspotLayer.setEnabled(true);
+    showArea(view.area);
+    arrive(view);
     nextStrikeAt = now + 3500; // the first strike comes early, to set the mood
   }
 
@@ -352,26 +422,44 @@ function start(r) {
         audio.thunder(strike.thunderDelay);
         nextStrikeAt = now + strikeLength(strike) + nextStrikeDelay(Math.random);
       }
-      const flash = strike ? flashIntensity(strike, now - strikeAt) * 0.9 : 0;
-
-      // Camera
-      const off = look.update(dt, reduce);
-      const eye = room.viewpoint.position;
-      const target = lookTarget(eye, room.viewpoint.lookAt, off.yaw, off.pitch);
+      // Camera: following a move, or standing at a viewpoint and looking around.
+      let eye, target;
+      let moveGlitch = 0;
+      if (move) {
+        const cam = cameraAt(move, now);
+        if (cam.area !== shownArea) showArea(cam.area);
+        eye = cam.position;
+        target = cam.lookAt;
+        moveGlitch = cam.glitch;
+        if (cam.done) arrive(move.to);
+      } else {
+        const off = look.update(dt, reduce);
+        eye = view.position;
+        target = lookTarget(eye, view.lookAt, off.yaw, off.pitch);
+        // lookTarget returns a point 1 m away; keep the viewpoint's distance for smooth moves.
+        const d = Math.hypot(...view.lookAt.map((v, i) => v - eye[i]));
+        lastLookAt = target.map((v, i) => eye[i] + (v - eye[i]) * d);
+      }
+      const area = areaOf(shownArea);
+      const proj = area.outdoors ? projOutdoors : projIndoors;
       const viewProj = multiply(proj, lookAt(eye, target));
+      const flash = strike ? flashIntensity(strike, now - strikeAt) * area.flashScale : 0;
 
-      r.drawScene(tapeMesh ? [roomMesh, tapeMesh] : [roomMesh], {
+      const meshes = [loader.mesh(shownArea)];
+      if (tapeMesh) meshes.push(tapeMesh);
+      r.drawScene(meshes, {
         viewProj,
         camPos: eye,
-        ambient: room.ambient,
-        lights: room.lights(now),
+        time,
+        ambient: area.ambient,
+        lights: area.lights(now),
         flash,
-        flashDir: room.flashDir,
+        flashDir: area.flashDir,
         flashColor: PALETTE.lightning,
-        sky: room.sky,
-        fogColor: room.fogColor,
-        fogNear: room.fogNear,
-        fogFar: room.fogFar,
+        sky: area.sky,
+        fogColor: area.fogColor,
+        fogNear: area.fogNear,
+        fogFar: area.fogFar,
       });
 
       // The tape you're holding makes the whole picture worse, the way a bad tape would.
@@ -389,8 +477,17 @@ function start(r) {
         noise = 0.12;
         if (!reduce) glitch = Math.max(glitch, 0.12 + 0.3 * progress);
       }
+      // Cutting between areas: the tape skips. With reduce flashing it's a dip to black instead.
+      let fade = fadeIn;
+      if (moveGlitch > 0) {
+        if (reduce) fade *= 1 - 0.85 * moveGlitch;
+        else {
+          glitch = Math.max(glitch, 0.9 * moveGlitch);
+          tracking = Math.max(tracking, moveGlitch);
+        }
+      }
       updateOsd(since, progress);
-      r.present({ source: 'scene', osd: true, time, tracking, bleed, noise, glitch, fade: fadeIn, reduce });
+      r.present({ source: 'scene', osd: true, time, tracking, bleed, noise, glitch, fade, reduce });
       hotspotLayer.update(viewProj, size.w, size.h);
     }
 
@@ -398,6 +495,16 @@ function start(r) {
   }
   requestAnimationFrame(frame);
 }
+
+/** Quiet lines the first time you reach a viewpoint in a session. */
+const FIRST_VISIT = {
+  'yard-gate': (t) => (t.length === 0
+    ? 'the porch light is on. somewhere inside, a vcr is waiting.'
+    : 'the house kept your tapes. some of them may be fading.'),
+  'hall-entry': () => 'the house is quieter than the storm.',
+  'living-room': (t) => (t.length === 0 ? 'the vcr blinks 00:00. it wants a tape.' : null),
+  'yard-pond': () => 'the water is very still.',
+};
 
 function clock(ms) {
   const s = Math.floor(ms / 1000);

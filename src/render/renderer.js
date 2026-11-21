@@ -57,7 +57,7 @@ function build(gl, canvas) {
 
   const sceneU = uniforms(gl, sceneProg, [
     'uViewProj', 'uSnapRes', 'uAmbient', 'uLightPos', 'uLightColor', 'uLightRange',
-    'uFlashDir', 'uFlash', 'uFlashColor', 'uSky', 'uCamPos', 'uFog', 'uFogColor',
+    'uFlashDir', 'uFlash', 'uFlashColor', 'uSky', 'uCamPos', 'uFog', 'uFogColor', 'uTime',
   ]);
   const sceneA = {
     pos: gl.getAttribLocation(sceneProg, 'aPos'),
@@ -140,6 +140,7 @@ function build(gl, canvas) {
       gl.uniform3fv(sceneU.uCamPos, f.camPos);
       gl.uniform2f(sceneU.uFog, f.fogNear, f.fogFar);
       gl.uniform3fv(sceneU.uFogColor, f.fogColor);
+      gl.uniform1f(sceneU.uTime, (f.time ?? 0) % 10000);
 
       const stride = FLOATS_PER_VERTEX * 4;
       for (const a of Object.values(sceneA)) gl.enableVertexAttribArray(a);

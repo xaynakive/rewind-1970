@@ -6,6 +6,12 @@ import { sub, cross, normalize } from './math.js';
 
 export const FLOATS_PER_VERTEX = 10;
 
+/** Rotates a point around the vertical axis. Positive angles turn +z toward +x. */
+export function rotateY([x, y, z], a) {
+  const c = Math.cos(a), s = Math.sin(a);
+  return [x * c + z * s, y, -x * s + z * c];
+}
+
 export function hexToRgb(hex) {
   const n = parseInt(hex.replace('#', ''), 16);
   return [((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255];
@@ -45,6 +51,22 @@ export class MeshBuilder {
     for (const [name, q] of Object.entries(faces)) {
       if (!skip.includes(name)) this.quad(q[0], q[1], q[2], q[3], color, emissive);
     }
+    return this;
+  }
+
+  /** Box rotated by `angle` radians around the vertical axis through its centre. */
+  boxRot([cx, cy, cz], [sx, sy, sz], angle, color, emissive = 0) {
+    const p = (x, y, z) => {
+      const [rx, , rz] = rotateY([x, 0, z], angle);
+      return [cx + rx, cy + y, cz + rz];
+    };
+    const hx = sx / 2, hy = sy / 2, hz = sz / 2;
+    const c = [
+      p(-hx, -hy, -hz), p(hx, -hy, -hz), p(hx, hy, -hz), p(-hx, hy, -hz),
+      p(-hx, -hy, hz), p(hx, -hy, hz), p(hx, hy, hz), p(-hx, hy, hz),
+    ];
+    const faces = [[1, 2, 6, 5], [4, 7, 3, 0], [3, 7, 6, 2], [0, 1, 5, 4], [4, 5, 6, 7], [1, 0, 3, 2]];
+    for (const [a, b, d, e] of faces) this.quad(c[a], c[b], c[d], c[e], color, emissive);
     return this;
   }
 

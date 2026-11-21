@@ -1,22 +1,12 @@
 // The living room: TV, VCR, sofa, pumpkins, a window onto the storm.
 // Built from primitives. Steering: art-style.md (palette, budgets).
+// Area interface: see systems/house/areas.js.
 
-import { MeshBuilder, hexToRgb } from '../../render/mesh.js';
+import { MeshBuilder } from '../../render/mesh.js';
+import { PALETTE, shade } from './palette.js';
 
-export const PALETTE = {
-  void: hexToRgb('#07060a'),
-  night: hexToRgb('#141a24'),
-  dampWall: hexToRgb('#2b2a26'),
-  rotWood: hexToRgb('#4a3524'),
-  pumpkin: hexToRgb('#c8641e'),
-  tapeLabel: hexToRgb('#d8cfb4'),
-  crtGlow: hexToRgb('#7fb8a4'),
-  bloodMoon: hexToRgb('#8a1c1c'),
-  lightning: hexToRgb('#dfe8ff'),
-};
+export { PALETTE };
 
-// Supporting shades derived from the palette (darker variants only).
-const shade = (c, k) => c.map((v) => v * k);
 const plastic = shade(PALETTE.void, 2.6);
 const rug = [0.23, 0.12, 0.13];
 const stem = [0.23, 0.23, 0.12];
@@ -35,7 +25,7 @@ export function buildLivingRoom() {
   mb.box([0, H / 2, 0], [W, H, D], PALETTE.dampWall, 0, ['ny', 'py']);
   mb.quad([-3, 0, -3], [3, 0, -3], [3, 0, 3], [-3, 0, 3], PALETTE.rotWood);
   mb.quad([-3, H, -3], [-3, H, 3], [3, H, 3], [3, H, -3], shade(PALETTE.dampWall, 0.6));
-  mb.quad([-1.4, 0.005, -1.6], [1.4, 0.005, -1.6], [1.4, 0.005, 0.8], [-1.4, 0.005, 0.8], rug);
+  mb.quad([-1.4, 0.01, -1.6], [1.4, 0.01, -1.6], [1.4, 0.01, 0.8], [-1.4, 0.01, 0.8], rug);
 
   // TV on its cabinet, VCR between.
   buildCabinet(mb);
@@ -71,9 +61,20 @@ export function buildLivingRoom() {
   mb.blob([1.55, 0.11, -2.55], 0.14, 0.8, 8, 4, shade(PALETTE.pumpkin, 0.8), 0.1, 4);
 
   return {
+    id: 'living-room',
+    outdoors: false,
     meshData: mb.build(),
     triangles: mb.triangles,
-    viewpoint: { position: [0.3, 1.38, 1.4], lookAt: [0, 0.85, -2.5] },
+    viewpoints: [
+      {
+        id: 'living-room',
+        label: 'the living room',
+        position: [0.3, 1.38, 1.4],
+        lookAt: [0, 0.85, -2.5],
+        exits: { back: 'hall-entry' },
+      },
+    ],
+    flashScale: 0.9,
     /** Hiding spots in this area (ids from systems/tapes/placement.js). Tapes rest on top. */
     spots: {
       // On the floor of the cabinet's right-hand shelf, spines facing the room.

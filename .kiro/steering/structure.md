@@ -25,7 +25,7 @@ rewind-1970/
 │   │   ├── tapes/       # tape model, placement, hints, cassette meshes and piles, rewind
 │   │   ├── decay/       # decay curve and stages, word drift
 │   │   ├── pond/        # ripples, glimpses of the skeleton, noticing the secret
-│   │   └── endings/     # (planned)
+│   │   └── endings/     # unlock, choosing the ending, the final tape's script and timeline
 │   ├── storage/         # IndexedDB access
 │   ├── audio/           # Web Audio synth: hiss, rain, thunder, tape motor, rewind whirr
 │   └── ui/              # DOM overlays: tape writer, playback, settings + text-only reader,

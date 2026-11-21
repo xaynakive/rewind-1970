@@ -5,7 +5,7 @@ Each milestone ends in something playable.
 - [x] 1. The night, the entry house and the courtyard
   - The page, the cold open, the loop clock and rewinds, the courtyard with rising water and stepping stones, the Caller, the lens and the candle, the name choice, the first memory (the paper boat).
   - _Requirements: 1, 2, 3, 4, 5.1–5.3, 5.6–5.7, 8, 10_
-- [ ] 2. Yeonhwa's house: the shrine to Sae, the cassette recorder, keys, three memories, wardrobes to hide in
+- [x] 2. Yeonhwa's house: the shrine to Sae, the cassette recorder, keys, three memories, wardrobes to hide in
   - _Requirements: 5.4, 6.2, 7.1_
 - [ ] 3. Wol's house: the rite, the margins, the scratched photograph
   - _Requirements: 6.3, 7.6_

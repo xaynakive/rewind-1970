@@ -8,7 +8,7 @@ import { fovForAspect } from '../render/camera.js';
 import { drawText } from '../render/bitmapFont.js';
 import { step, look, forwardOf, rightOf, segmentClear, EYE_HEIGHT } from '../systems/memory/walker.js';
 import { pick, REACH } from '../systems/memory/reach.js';
-import { createPresence, tickPresence, wake, sees } from '../systems/memory/presence.js';
+import { createPresence, tickPresence, wake, sees, resetAfterCatch } from '../systems/memory/presence.js';
 import { buildItemMesh } from '../systems/memory/market.js';
 import { buildFigure } from '../systems/memory/figures.js';
 import { createStrike, flashIntensity, strikeLength, nextStrikeDelay } from '../systems/house/lightning.js';
@@ -62,6 +62,11 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
   let quietUntil = 0;
   let strike = null, strikeAt = 0, nextStrikeAt = performance.now() + 7000;
   const ripples = [];
+  // Where you are: an area with its own rules (her house), or the courtyard.
+  const areaAt = (p) => (level.areas ?? []).find((a) => p[0] > a.min[0] && p[0] < a.max[0] && p[1] > a.min[1] && p[1] < a.max[1]) ?? null;
+  let area = null;
+  let route = level.route;
+  const entered = new Set();
   let rippleAt = 0;
 
   // ----- input -----
@@ -274,14 +279,28 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       hidden,
       seenHiding: mode.kind === 'hidden' && mode.seen,
       // Light, the tally light, or a name she has heard you answer to: she sees you from farther.
-      light: lit || nameDrawsHer(save),
+      light: lit || nameDrawsHer(save) || Boolean(area?.strong),
       loud: (moving && !keys.has('ShiftLeft') && !keys.has('ShiftRight')) || (moving && inWater),
     };
   }
 
+  const containerOf = (it) => it.inside ?? it.needsOpen ?? null;
+  const itemAvailable = (it) => {
+    if (has(it.id)) return false;
+    const c = containerOf(it);
+    return !c || (partById.get(c)?.open ?? 0) > 0.75;
+  };
+  /** Items in a drawer move with it. */
+  function itemOffset(it) {
+    const cont = it.inside ? partById.get(it.inside) : null;
+    if (!cont || cont.kind !== 'drawer') return null;
+    return cont.transform(cont.open);
+  }
   function itemBounds(it) {
     const pad = 0.08;
-    return { min: it.pos.map((v, i) => v - it.size[i] / 2 - pad), max: it.pos.map((v, i) => v + it.size[i] / 2 + pad) };
+    const m = itemOffset(it);
+    const c = m ? [it.pos[0] + m[12], it.pos[1] + m[13], it.pos[2] + m[14]] : it.pos;
+    return { min: c.map((v, i) => v - it.size[i] / 2 - pad), max: c.map((v, i) => v + it.size[i] / 2 + pad) };
   }
   function targets() {
     const out = [];
@@ -290,7 +309,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     for (const x of level.readables) out.push({ id: x.id, ...x.bounds });
     return out;
   }
-  const itemTargets = () => [...itemById.values()].filter((it) => !has(it.id)).map((it) => ({ id: it.id, ...itemBounds(it) }));
+  const itemTargets = () => [...itemById.values()].filter(itemAvailable).map((it) => ({ id: it.id, ...itemBounds(it) }));
   function promptFor(id) {
     if (!id) return null;
     const p = partById.get(id);
@@ -328,7 +347,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       .map(({ l, i }) => {
         let k = 0.9 + 0.1 * Math.sin(now * 0.003 + i * 1.7);
         if (awake && Math.hypot(caller.pos[0] - l.pos[0], caller.pos[1] - l.pos[2]) < 6) k *= 0.35 + 0.65 * (Math.sin(now * 0.05 + i * 9) > 0.2 ? 1 : 0.3);
-        return { pos: l.pos, color: l.color, intensity: level.lantern.intensity * k, range: level.lantern.range };
+        return { pos: l.pos, color: l.color, intensity: level.lantern.intensity * k * (l.intensity ?? 1), range: l.range ?? level.lantern.range };
       });
   }
 
@@ -438,14 +457,31 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     colliders = activeColliders();
     if (mode.kind === 'walk') walker = { ...walker, pos: step(walker, { forward: 0, strafe: 0 }, 0, colliders).pos };
 
+    // Changing area: the rain, her route, a line the first time.
+    const nowArea = areaAt(walker.pos);
+    if (nowArea !== area && mode.kind === 'walk') {
+      area = nowArea;
+      if (!quietUntil) audio.setRain(area?.indoor || inSafe(walker.pos) ? 0.4 : 1);
+      if (area && !entered.has(area.id)) { entered.add(area.id); if (area.enterLine) hud.say(area.enterLine, 4500); }
+    }
+    const wantRoute = area?.route ?? level.route;
+    if (wantRoute !== route && (caller.kind === 'patrol' || caller.kind === 'dormant')) {
+      route = wantRoute;
+      if (caller.kind === 'patrol') {
+        // She follows you home: she appears at the far end of the new route, not on top of you.
+        caller = { ...resetAfterCatch(caller, route, walker.pos, now), blindUntil: now + 2500 };
+        if (area?.callerLine) { warnedAt = -1e9; warn(now, area.callerLine); }
+      }
+    }
+
     // The Caller
     if (caller.kind === 'dormant' && nightMs >= wakeAt(loopNo) && mode.kind === 'walk') {
-      caller = wake(caller, level.route, now);
+      caller = wake(caller, route, now);
       warn(now, level.lines.wake);
     }
     if (!frozen && (mode.kind === 'walk' || mode.kind === 'hidden')) {
       const before = caller.pos;
-      const res = tickPresence(caller, { dt: sec, now, route: level.route, colliders, player: playerInfo(moved > 0, inWater), canSee, story: s.storyMode });
+      const res = tickPresence(caller, { dt: sec, now, route, colliders, player: playerInfo(moved > 0, inWater), canSee, story: s.storyMode });
       caller = res.state;
       callerWalked += Math.hypot(caller.pos[0] - before[0], caller.pos[1] - before[1]);
       for (const ev of res.events) {
@@ -456,7 +492,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     const pdist = Math.hypot(caller.pos[0] - walker.pos[0], caller.pos[1] - walker.pos[1]);
     const callerShown = caller.kind !== 'dormant' && caller.kind !== 'gone';
     if (callerShown && pdist < NEAR_WARN && mode.kind === 'walk') warn(now, level.lines.near);
-    if (quietUntil && now > quietUntil) { quietUntil = 0; audio.setRain(inSafe(walker.pos) ? 0.45 : 1); }
+    if (quietUntil && now > quietUntil) { quietUntil = 0; audio.setRain(area?.indoor || inSafe(walker.pos) ? 0.4 : 1); }
     if (callerWalked > 0.75) { callerWalked = 0; if (callerShown) audio.presenceStep(Math.max(0, 1 - pdist / 16)); }
 
     // Rewind: the picture runs backward, then a new night.
@@ -471,7 +507,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       if (i !== mode.shown) {
         mode.shown = i;
         hud.setFlashback(i < mode.lines.length ? mode.lines[i] : null);
-        if (i >= mode.lines.length) { mode = { kind: 'walk' }; hud.say('the tape skips. you are back in the rain.', 3500); }
+        if (i >= mode.lines.length) { mode = { kind: 'walk' }; hud.say(area?.indoor ? 'the tape skips. you are back, and the house is listening.' : 'the tape skips. you are back in the rain.', 3500); }
       }
     }
 
@@ -527,10 +563,16 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     const list = [staticMesh, rainMesh, waterGl];
     if (lens.recording) list.push(revealedMesh);
     const glintBase = s.clearPicture ? 0.3 : 0;
-    for (const p of partById.values()) { p.gl.model = p.transform(p.open); p.gl.highlight = target === p.id ? 0.2 : 0; list.push(p.gl); }
+    for (const p of partById.values()) {
+      p.gl.model = p.transform(p.open);
+      const holds = level.items.some((it) => containerOf(it) === p.id && !has(it.id));
+      p.gl.highlight = target === p.id ? 0.2 : holds ? glintBase * 0.6 : 0;
+      list.push(p.gl);
+    }
     let idx = 0;
     for (const it of itemById.values()) {
       if (has(it.id)) continue;
+      it.gl.model = itemOffset(it) ?? undefined;
       const glint = Math.max(0, Math.sin(time * 1.6 + idx * 1.9)) ** 12 * 0.9;
       it.gl.highlight = target === it.id ? 0.6 : Math.max(glintBase, glint);
       list.push(it.gl);
@@ -563,7 +605,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       audio.thunder(strike.thunderDelay);
       nextStrikeAt = now + strikeLength(strike) + nextStrikeDelay(Math.random);
     }
-    if (strike) flash = flashIntensity(strike, now - strikeAt) * level.flashScale * (inSafe(walker.pos) ? 0.4 : 1);
+    if (strike) flash = flashIntensity(strike, now - strikeAt) * level.flashScale * (inSafe(walker.pos) || area?.indoor ? 0.4 : 1);
 
     // Ripples: footsteps in the water and rain near you.
     if (now - rippleAt > 180 && waterY > -0.24) {

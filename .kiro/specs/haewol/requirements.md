@@ -72,7 +72,7 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 ### Requirement 6: The places
 #### Acceptance criteria
 1. **The entry house:** where every loop begins. A dead TV, the table where the camcorder was found. Always safe.
-2. **Yeonhwa's house:** her shrine to Sae, the warm cassette recorder. Rooms open with keys. She is strongest here. Three memories.
+2. **Yeonhwa's house:** her shrine to Sae, the warm cassette recorder. Rooms open with keys. She is strongest here: inside it she always sees you as if your light were up, and she follows you in. Three memories, and two places to hide.
 3. **Wol's house:** herb-dark, papered with notes that explain the rite and, in the margins, how to undo it.
 4. **The schoolroom:** small desks, a chalkboard that writes back when you're not looking, Sae's things, and a corridor that is longer each time you run it.
 5. **The shrine on the hill:** reachable only with enough of the truth. The endings play here.

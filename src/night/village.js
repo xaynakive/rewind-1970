@@ -6,41 +6,20 @@
 
 import { MeshBuilder } from '../render/mesh.js';
 import { translation } from '../render/math.js';
-import { PALETTE, shade, mix, GLOW, SKY, RAIN } from '../systems/house/palette.js';
+import { shade, mix, GLOW, RAIN } from '../systems/house/palette.js';
+import {
+  GLOSS, WATER, wood, darkWood, paper, ink, stone, stoneDark, roofTile, lanternRed, waterCol, rainColor, CALLER_RED, mulberry32,
+  wallZ, wallX, eaves, lantern,
+} from './pieces.js';
+import { buildYeonhwa, YEONHWA, FLOOR, YEONHWA_ROUTE, YEONHWA_ITEM_IDS } from './yeonhwa.js';
 import { boundsOf, grow, footprint, noteMesh, inspectOf } from '../systems/memory/market.js';
 
-const GLOSS = 7;
-const WATER = 5;
 
 export const SUNKEN = -0.25; // the courtyard floor, inside the stone rim
 export const STONE_TOP = 0.25; // stepping stones stay above the highest water (0.2)
 export const YARD = { x0: -12, x1: 12, z0: 6, z1: -16 };
 export const INNER = { x0: -10.5, x1: 10.5, z0: 4.5, z1: -14.5 };
 export const HOUSE = { x0: -3, x1: 3, z0: 6, z1: 12 };
-
-const wood = PALETTE.rotWood;
-const darkWood = shade(wood, 0.6);
-const paper = [0.6, 0.56, 0.47];
-const ink = [0.1, 0.09, 0.1];
-const stone = [0.3, 0.31, 0.3];
-const stoneDark = [0.2, 0.21, 0.21];
-const roofTile = [0.12, 0.13, 0.15];
-const lanternRed = [0.85, 0.14, 0.1];
-const waterCol = [0.07, 0.1, 0.13];
-const rainColor = [0.5, 0.56, 0.66];
-/** Her dress: a dark, wet red. The only saturated colour besides the lanterns and the tally light. */
-const CALLER_RED = [0.36, 0.05, 0.05];
-
-function mulberry32(seed) {
-  let a = seed >>> 0;
-  return () => {
-    a = (a + 0x6d2b79f5) >>> 0;
-    let t = a;
-    t = Math.imul(t ^ (t >>> 15), t | 1);
-    t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
-    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
-  };
-}
 
 // ---------- the stepping stones ----------
 
@@ -63,6 +42,8 @@ export const STONE_HALF = 0.36;
 
 /** The ground height under a point, and whether it is the sunken courtyard floor. */
 export function groundAt(x, z, stones = STONES) {
+  if (x > YEONHWA.x0 && x < YEONHWA.x1 && z < YEONHWA.z0 && z > YEONHWA.z1) return { y: FLOOR, sunken: false, stone: false };
+  if (x >= YEONHWA.x1 && x < YEONHWA.x1 + 0.5 && z < -4.25 && z > -5.75) return { y: 0.15, sunken: false, stone: false }; // her doorstep
   if (x > INNER.x0 && x < INNER.x1 && z < INNER.z0 && z > INNER.z1) {
     for (const s of stones) if (Math.abs(x - s[0]) < STONE_HALF + 0.05 && Math.abs(z - s[1]) < STONE_HALF + 0.05) return { y: STONE_TOP, sunken: false, stone: true };
     return { y: SUNKEN, sunken: true, stone: false };
@@ -71,52 +52,7 @@ export function groundAt(x, z, stones = STONES) {
 }
 const STONES = stonePath();
 
-// ---------- pieces ----------
-
-/** A wall along z at x, from z0 down to z1, with door gaps [za, zb]. Paper panels between posts. */
-function wallZ(mb, x, z0, z1, h, gaps = [], base = 0, col = paper) {
-  const cuts = [z0, ...gaps.flat(), z1].sort((a, b) => b - a);
-  for (let i = 0; i < cuts.length - 1; i += 2) {
-    const a = cuts[i], b = cuts[i + 1];
-    const n = Math.max(1, Math.round(a - b));
-    mb.quadGrid([x, base, a], [x, base, b], [x, base + h, b], [x, base + h, a], n, 2, col);
-    for (let z = a; z >= b - 1e-6; z -= Math.max(0.9, (a - b) / Math.max(1, Math.round((a - b) / 1.2)))) mb.box([x, base + h / 2, z], [0.12, h, 0.12], darkWood);
-    mb.box([x, base + 0.95, (a + b) / 2], [0.1, 0.06, a - b], darkWood);
-  }
-  for (const [za, zb] of gaps) mb.quad([x, base + 2.2, za], [x, base + 2.2, zb], [x, base + h, zb], [x, base + h, za], col);
-}
-function wallX(mb, z, x0, x1, h, gaps = [], base = 0, col = paper) {
-  const cuts = [x0, ...gaps.flat(), x1].sort((a, b) => a - b);
-  for (let i = 0; i < cuts.length - 1; i += 2) {
-    const a = cuts[i], b = cuts[i + 1];
-    const n = Math.max(1, Math.round(b - a));
-    mb.quadGrid([a, base, z], [b, base, z], [b, base + h, z], [a, base + h, z], n, 2, col);
-    for (let x = a; x <= b + 1e-6; x += Math.max(0.9, (b - a) / Math.max(1, Math.round((b - a) / 1.2)))) mb.box([x, base + h / 2, z], [0.12, h, 0.12], darkWood);
-    mb.box([(a + b) / 2, base + 0.95, z], [b - a, 0.06, 0.1], darkWood);
-  }
-  for (const [xa, xb] of gaps) mb.quad([xa, base + 2.2, z], [xb, base + 2.2, z], [xb, base + h, z], [xa, base + h, z], col);
-}
-
-/** Heavy eaves over a house front: a sloped band of dark tiles. */
-function eaves(mb, a, b, out, h) {
-  // a, b: ends of the wall top [x, z]; out: unit vector away from the wall, on the floor plane.
-  const lo = (p) => [p[0] + out[0] * 1.1, h - 0.45, p[1] + out[1] * 1.1];
-  const hi = (p) => [p[0] - out[0] * 0.4, h + 0.55, p[1] - out[1] * 0.4];
-  mb.quadGrid(lo(a), lo(b), hi(b), hi(a), Math.max(1, Math.round(Math.hypot(b[0] - a[0], b[1] - a[1]))), 1, roofTile);
-  for (let t = 0; t <= 1.0001; t += 0.125) {
-    const p = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t];
-    const l = lo(p), u = hi(p);
-    mb.box([(l[0] + u[0]) / 2, (l[1] + u[1]) / 2 + 0.04, (l[2] + u[2]) / 2], [Math.abs(out[1]) * 0.08 + Math.abs(out[0]) * 1.5, 0.06, Math.abs(out[0]) * 0.08 + Math.abs(out[1]) * 1.5], shade(roofTile, 0.7));
-  }
-}
-
-function lantern(mb, lights, [x, y, z], weight = 1) {
-  mb.box([x, y + 0.24, z], [0.02, 0.2, 0.02], ink);
-  mb.blob([x, y, z], 0.17, 1.25, 8, 5, lanternRed, GLOW * 0.85);
-  mb.box([x, y + 0.2, z], [0.16, 0.03, 0.16], darkWood);
-  mb.box([x, y - 0.21, z], [0.14, 0.03, 0.14], darkWood);
-  lights.push({ pos: [x, y - 0.2, z], color: [1, 0.36, 0.24], weight });
-}
+// ---------- rain ----------
 
 function buildRain(mb, rand) {
   for (let i = 0; i < 1100; i++) {
@@ -311,7 +247,9 @@ export function buildVillage() {
     }
     eaves(mb, [HOUSE.x1 + 0.4, HOUSE.z0], [HOUSE.x0 - 0.4, HOUSE.z0], [0, -1], 2.6);
     colliders.push(
-      { min: [YARD.x0 - 0.3, YARD.z1], max: [YARD.x0, YARD.z0] },
+      // West: Yeonhwa's house front, with her door at z -4.4..-5.6.
+      { min: [YARD.x0 - 0.12, -4.4], max: [YARD.x0 + 0.05, YARD.z0] },
+      { min: [YARD.x0 - 0.12, YARD.z1], max: [YARD.x0 + 0.05, -5.6] },
       { min: [YARD.x1, YARD.z1], max: [YARD.x1 + 0.3, YARD.z0] },
       { min: [YARD.x0, YARD.z1 - 0.3], max: [YARD.x1, YARD.z1] },
     );
@@ -322,7 +260,6 @@ export function buildVillage() {
       d.box([center[0], center[1] + 0.3, center[2]], size.map((s) => (s < 0.2 ? s + 0.02 : s * 0.7)), shade(paper, 0.6));
       parts.push({ id, kind: 'door', label, mesh: d.build(), bounds: grow(boundsOf(center, size), 0.1), transform: () => translation([0, 0, 0]), needs: `open:${id}`, lockedText });
     };
-    shut('yeonhwa-door', "Yeonhwa's door", [YARD.x0 + 0.04, 1.1, -5], [0.06, 2.2, 1.2], "it won't open tonight. inside, a cassette recorder clicks off.");
     shut('wol-door', "Wol's door", [YARD.x1 - 0.04, 1.1, -3], [0.06, 2.2, 1.2], 'herbs hang from the eaves. the door is tied shut with red thread.');
     shut('school-door', 'the schoolroom door', [-5, 1.1, YARD.z1 + 0.04], [1.2, 2.2, 0.06], 'small shoes are lined up outside. the door is stuck.');
     shut('hill-gate', 'the gate to the hill', [9, 1.1, YARD.z1 + 0.04], [1.4, 2.2, 0.06], 'the path to the shrine on the hill. you know too little to climb it.');
@@ -332,6 +269,7 @@ export function buildVillage() {
     mb.box([9, 12.6, YARD.z1 - 21.38], [0.3, 0.3, 0.02], lanternRed, GLOW);
   }
 
+  buildYeonhwa({ mb, revealed, colliders, parts, items, hides, lights });
   buildRain(rain, rand);
 
   // ----- things to find -----
@@ -375,6 +313,12 @@ export function buildVillage() {
     groundAt: (x, z) => groundAt(x, z, STONES),
     start: { pos: [0, 10.6], yaw: 0 },
     safe: { min: [HOUSE.x0, HOUSE.z0 + 0.15], max: [HOUSE.x1, HOUSE.z1] },
+    // Places with their own rules. Outside them you are in the courtyard (`route`).
+    areas: [
+      { id: 'yeonhwa', min: [YEONHWA.x0, YEONHWA.z1], max: [YEONHWA.x1, YEONHWA.z0], indoor: true, strong: true,
+        route: YEONHWA_ROUTE, enterLine: 'her house. it smells of incense and river water. do not linger.',
+        callerLine: 'the shrine candles gutter. she is home.' },
+    ],
     route: [[-9.6, 3.4], [-9.6, -13.6], [-3, -13.6], [-1.6, -8.2], [3.4, -8.2], [9.4, -11], [9.6, 0.8], [4.2, 3.6], [0.0, 1.0], [-4.2, 3.6]],
     sae: { pos: [-1.5, -3.4], yaw: 2.4, scale: 0.6 },
     callerLook: { face: 'veil', coat: CALLER_RED },
@@ -419,4 +363,4 @@ function waterMesh() {
   return mb.build();
 }
 
-export const VILLAGE_ITEM_IDS = ['memory-boat', 'note-water'];
+export const VILLAGE_ITEM_IDS = ['memory-boat', 'note-water', ...YEONHWA_ITEM_IDS];

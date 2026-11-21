@@ -189,3 +189,50 @@ test('the words follow the tone rules', () => {
   ].join(' ').toLowerCase();
   for (const w of ['blood', 'gore', 'kill', 'dead body', 'corpse', 'drown', 'murder']) assert.ok(!words.includes(w), w);
 });
+
+// ----- Yeonhwa's house (Requirement 6.2) -----
+
+test("her house: three memories, the rite, and the key to Sae's room", () => {
+  const ids = ['memory-tape', 'memory-ribbon', 'memory-telegram', 'note-rite', 'key-sae'];
+  for (const id of ids) assert.ok(village.items.some((i) => i.id === id), id);
+  const mem = village.items.filter((i) => i.kind === 'memory' && i.id !== 'memory-boat');
+  assert.equal(mem.length, 3);
+  for (const m of mem) assert.ok(m.flashback.length >= 3, m.id);
+  // The key is hidden in the rice jar, and opens Sae's door; her ribbon is behind it.
+  assert.equal(village.items.find((i) => i.id === 'key-sae').inside, 'rice-jar');
+  assert.equal(village.parts.find((p) => p.id === 'sae-door').needs, 'key-sae');
+  assert.ok(village.parts.find((p) => p.id === 'sae-door').collider);
+  const ribbon = village.items.find((i) => i.id === 'memory-ribbon');
+  assert.ok(ribbon.pos[0] < -18 && ribbon.pos[2] < -4 && ribbon.pos[2] > -9, "the ribbon is in Sae's room");
+});
+
+test('her house is an area where she is strongest, with her own route', () => {
+  const a = village.areas.find((x) => x.id === 'yeonhwa');
+  assert.ok(a.indoor && a.strong && a.route.length >= 4);
+  const inside = (p) => p[0] > a.min[0] && p[0] < a.max[0] && p[1] > a.min[1] && p[1] < a.max[1];
+  for (const p of a.route) assert.ok(inside(p), `${p} is in her house`);
+});
+
+test('property: every route can be walked without passing through anything', () => {
+  // She moves in a straight line between waypoints, pushed out of boxes; sample each leg.
+  for (const r of [village.route, ...village.areas.map((a) => a.route)]) {
+    r.forEach((p, i) => {
+      const q = r[(i + 1) % r.length];
+      for (let t = 0; t <= 1; t += 0.05) {
+        const s = [p[0] + (q[0] - p[0]) * t, p[1] + (q[1] - p[1]) * t];
+        for (const b of village.colliders) assert.ok(!overlaps(s, b, RADIUS * 0.9), `leg ${p} -> ${q} hits ${JSON.stringify(b)} at ${s}`);
+      }
+    });
+  }
+});
+
+test('the hiding places in her house look out from just outside their doors', () => {
+  for (const id of ['cupboard', 'wardrobe']) {
+    const h = village.hides.find((x) => x.id === id);
+    assert.ok(h, id);
+    for (const b of village.colliders) assert.ok(!overlaps(h.exit.pos, b), `${id} exit`);
+    // The view point is outside the furniture's footprint (or the closed front would fill the screen).
+    const inBox = village.colliders.some((b) => h.view.pos[0] > b.min[0] && h.view.pos[0] < b.max[0] && h.view.pos[2] > b.min[1] && h.view.pos[2] < b.max[1]);
+    assert.ok(!inBox, `${id} view is inside something`);
+  }
+});

@@ -30,6 +30,10 @@ import { createPlayback } from './ui/playback.js';
 import { createHint } from './ui/hint.js';
 import { createNavArrows } from './ui/navArrows.js';
 import { createTvScreen } from './ui/tvScreen.js';
+import { createCaseFile } from './ui/caseFile.js';
+import {
+  HOUSE_TAPES, PLAYBACK_NOTE, normalizeProgress, revealOf, allFound, asTape, withMark, isHouseId, houseTape,
+} from './systems/mystery/mystery.js';
 import { buildFinalTapeMesh, FINAL_TAPE_HOTSPOT, TV_SHOTS } from './systems/house/livingRoom.js';
 import { easeInOut } from './systems/house/navigation.js';
 import {
@@ -52,11 +56,23 @@ const pondNoticedBefore = Boolean(await store.getMeta('pondSecretNoticed').catch
 const finalSeenBefore = Boolean(await store.getMeta('finalTapeSeen').catch(() => false));
 const seenEndingsBefore = (await store.getMeta('seenEndings').catch(() => null)) ?? [];
 
+// ---------- the previous resident's tapes (spec: .kiro/specs/mystery) ----------
+
+let mystery = normalizeProgress(await store.getMeta('mystery').catch(() => null));
+async function saveMystery(next) {
+  mystery = next;
+  try { await store.setMeta('mystery', mystery); } catch { /* remembered for this visit */ }
+}
+const foundHouseTapes = () => HOUSE_TAPES.filter((t) => mystery.found.includes(t.id)).map((t) => asTape(t, mystery));
+
 // ---------- tapes ----------
 
 const tapeListeners = new Set();
 const tapesChanged = () => { for (const fn of tapeListeners) fn(); };
-const levelOf = (tape) => decayLevel(tape.lastViewedAt, Date.now(), timeScale(settings));
+/** House tapes have a fixed decay (0 once rewound); the user's tapes decay with time. */
+const levelOf = (tape) => (tape.house ? tape.decay : decayLevel(tape.lastViewedAt, Date.now(), timeScale(settings)));
+/** A user tape, or a house tape in its current state. */
+const tapeById = (id) => tapes.find((t) => t.id === id) ?? (isHouseId(id) ? asTape(houseTape(id), mystery) : null);
 
 async function saveTape(next) {
   await store.put(next);
@@ -83,6 +99,15 @@ async function recordTape({ label, text }) {
 
 const writer = createTapeWriter($('#tape-writer'), recordTape);
 
+/** Set by start() so solving the case can talk to the house. */
+let onCaseSolved = () => {};
+const caseFile = createCaseFile($('#case'), {
+  async onSolved() {
+    await saveMystery({ ...mystery, solved: true });
+    onCaseSolved();
+  },
+});
+
 const panel = createSettingsPanel($('#settings'), {
   settings,
   onChange(next) {
@@ -95,6 +120,9 @@ const panel = createSettingsPanel($('#settings'), {
     if (demoChanged) tapesChanged();
   },
   listTapes: async () => tapes,
+  listHouseTapes: () => foundHouseTapes(),
+  caseAvailable: () => allFound(mystery) && !mystery.solved,
+  openCase: () => caseFile.open(),
   deleteAll: async () => { await store.clear(); tapes = []; tapesChanged(); },
   writeTape: () => writer.open(),
 });
@@ -212,6 +240,7 @@ function start(r) {
 
   async function secretNoticed() {
     pond.noticed = true;
+    rebuildTapes(); // her tape in the water can surface now
     try { await store.setMeta('pondSecretNoticed', true); } catch { /* remembered for this visit */ }
     setTimeout(() => hint.show('you look away. when you look back, the water is just water.', 5000), 1200);
   }
@@ -239,7 +268,7 @@ function start(r) {
 
   function startFinale() {
     if (finale || busy || rewind.kind !== 'idle' || move) return;
-    const ending = chooseEnding(tapes, Date.now(), pond.noticed, timeScale(settings));
+    const ending = chooseEnding(tapes, Date.now(), pond.noticed, timeScale(settings), mystery.solved);
     const script = buildFinalTape(tapes, ending);
     finale = {
       start: performance.now(),
@@ -283,14 +312,64 @@ function start(r) {
   // ----- tapes in the room -----
 
   let tapeMesh = null;
+  let houseFlashMesh = null;
   let lastTapeBuild = 0;
+
+  // ----- the house's tapes -----
+
+  const houseCtx = () => ({
+    progress: mystery,
+    pondNoticed: pond.noticed,
+    anyUserRewound: tapes.some((t) => (t.rewindCount ?? 0) > 0),
+  });
+  /** What the house whispers when one of its tapes appears somewhere you aren't looking. */
+  const REVEAL_HINTS = {
+    'house-4': 'upstairs, something settles on top of something tall.',
+    'house-5': 'a rung creaks on the attic ladder.',
+  };
+  let revealedBefore = new Set(HOUSE_TAPES.filter((t) => revealOf(t, houseCtx()) === 'shown').map((t) => t.id));
+  let revealHintPending = null;
+  let caseHintPending = false;
+  function noteNewReveals(ctx) {
+    const now = new Set(HOUSE_TAPES.filter((t) => revealOf(t, ctx) === 'shown').map((t) => t.id));
+    for (const id of now) if (!revealedBefore.has(id) && REVEAL_HINTS[id]) revealHintPending = REVEAL_HINTS[id];
+    revealedBefore = now;
+  }
+  /** One pending line from the house, shown when the player is free to read it. Returns true if shown. */
+  function showPendingHouseHint() {
+    if (caseHintPending) {
+      caseHintPending = false;
+      hint.show("that's all of her tapes. the tv is waiting for an answer. press it once you've rewound this one.", 5500);
+      return true;
+    }
+    if (revealHintPending) {
+      hint.show(revealHintPending, 5000);
+      revealHintPending = null;
+      return true;
+    }
+    return false;
+  }
+  onCaseSolved = () => {
+    hint.show(isUnlocked(tapes)
+      ? 'the house is quiet for the first time. play the tape in the vcr.'
+      : 'the house is quiet for the first time.', 6000);
+    rebuildTapes();
+  };
   /** Tape piles and selectable props for the area on screen. */
   function rebuildTapes() {
     const area = areaOf(shownArea);
-    const visible = tapes.filter((t) => t.id !== carrying);
+    const ctx = houseCtx();
+    const houseShown = HOUSE_TAPES.filter((t) => t.id !== carrying && revealOf(t, ctx) === 'shown').map((t) => asTape(t, mystery));
+    const houseFlash = HOUSE_TAPES.filter((t) => t.id !== carrying && revealOf(t, ctx) === 'flash').map((t) => asTape(t, mystery));
+    const visible = [...tapes.filter((t) => t.id !== carrying), ...houseShown];
     const built = buildTapeMeshes(visible, spotsOf(area), levelOf);
     if (tapeMesh) r.disposeMesh(tapeMesh);
     tapeMesh = built.meshData ? r.createMesh(built.meshData) : null;
+    // House tapes that only show while lightning lights them: their own mesh, nothing to click yet.
+    const flashBuilt = buildTapeMeshes(houseFlash, area.spots, levelOf);
+    if (houseFlashMesh) r.disposeMesh(houseFlashMesh);
+    houseFlashMesh = flashBuilt.meshData ? r.createMesh(flashBuilt.meshData) : null;
+    noteNewReveals(ctx);
     // A tape still under the water can't be picked up yet.
     const reachable = built.hotspots.filter((h) => h.spot !== 'pond' || pondRise >= 1);
     // The final tape sits over the VCR, so it's listed first (on top).
@@ -372,34 +451,51 @@ function start(r) {
   tapeListeners.add(rebuildTapes);
 
   async function findTape(id) {
-    const tape = tapes.find((t) => t.id === id);
+    const tape = tapeById(id);
     if (!tape || busy) return;
     hint.hide();
-    const previous = carrying ? tapes.find((t) => t.id === carrying) : null;
+    const previous = carrying ? tapeById(carrying) : null;
     carrying = id;
     try {
-      // Swapping: the tape you were holding slides under its pile.
-      if (previous && previous.id !== id) {
+      // Swapping: the tape you were holding slides under its pile. (House tapes lie alone.)
+      if (previous && previous.id !== id && !previous.house) {
         await saveTape(slideUnder(previous, tapes.filter((t) => t.spot === previous.spot)));
       }
-      if (!tape.found) await saveTape({ ...tape, found: true });
+      if (tape.house && !tape.found) {
+        await saveMystery(withMark(mystery, 'found', id));
+        if (allFound(mystery) && !mystery.solved) caseHintPending = true;
+      } else if (!tape.house && !tape.found) {
+        await saveTape({ ...tape, found: true });
+      }
     } catch { /* still playable; it is saved next time */ }
-    const shown = tapes.find((t) => t.id === id) ?? tape;
+    const shown = tapeById(id) ?? tape;
     rebuildTapes();
-    if (previous && previous.id !== id) hint.show('you slide the other tape under its pile.');
-    playback.open(shown, { level: levelOf(shown), rewound: false, reduce: settings.reduceFlashing });
+    if (previous && previous.id !== id) hint.show(previous.house ? 'you set the other tape back down.' : 'you slide the other tape under its pile.');
+    playback.open(shown, {
+      level: levelOf(shown),
+      rewound: false,
+      reduce: settings.reduceFlashing,
+      note: shown.house && !shown.rewound ? PLAYBACK_NOTE : undefined,
+    });
   }
 
   async function finishRewind(tapeId) {
     stopWhirr();
     rewind = idle();
     suppressTvUntil = performance.now() + 600;
-    const tape = tapes.find((t) => t.id === tapeId);
+    const tape = tapeById(tapeId);
     if (!tape) return;
     busy = true;
-    const restored = applyRewind(tape, Date.now());
+    let restored;
     try {
-      await saveTape(restored);
+      if (tape.house) {
+        // Rewinding her tape clears the static off the last line: the next clue.
+        await saveMystery(withMark(mystery, 'rewound', tapeId));
+        restored = tapeById(tapeId);
+      } else {
+        restored = applyRewind(tape, Date.now());
+        await saveTape(restored);
+      }
     } catch {
       busy = false;
       hint.show('the tape jammed. try again.');
@@ -415,6 +511,7 @@ function start(r) {
   const playback = createPlayback($('#playback'), {
     onClose({ tapeId, rewound }) {
       if (unlockHintPending) showUnlockHint();
+      else if (showPendingHouseHint()) { /* the house had something to say */ }
       else if (rewound) hint.show('the tape slips back to where you found it.');
       else if (carrying === tapeId) hint.show('you take the tape with you. the tv is waiting.');
     },
@@ -428,6 +525,7 @@ function start(r) {
       if (id === 'vcr') return writer.open();
       if (id === 'tv') {
         if (carrying || performance.now() < suppressTvUntil) return; // handled by press/release
+        if (allFound(mystery) && !mystery.solved) return caseFile.open();
         const n = tapes.length;
         hint.show(n === 0
           ? 'no signal. the vcr is waiting for a tape.'
@@ -486,7 +584,7 @@ function start(r) {
   let nextStrikeAt = Infinity;
   let last = performance.now();
 
-  const anyDialogOpen = () => writer.isOpen || panel.isOpen || playback.isOpen;
+  const anyDialogOpen = () => writer.isOpen || panel.isOpen || playback.isOpen || caseFile.isOpen;
 
   function press() {
     if (mode.kind !== 'cold-open' || anyDialogOpen()) return;
@@ -556,13 +654,14 @@ function start(r) {
   // ----- drawing -----
 
   /** Draws the area on screen from `eye` toward `target`. Returns the view-projection matrix. */
-  function drawRoom(now, time, eye, target, flash, { ripples = null, reveal = 0, showFinal = false, tvOn = false } = {}) {
+  function drawRoom(now, time, eye, target, flash, { ripples = null, reveal = 0, showFinal = false, tvOn = false, showHouseFlash = false } = {}) {
     const area = areaOf(shownArea);
     const proj = area.outdoors ? projOutdoors : projIndoors;
     const viewProj = multiply(proj, lookAt(eye, target));
     const meshes = [loader.mesh(shownArea)];
     if (tapeMesh) meshes.push(tapeMesh);
     if (showFinal) meshes.push(finalTapeMesh);
+    if (showHouseFlash && houseFlashMesh) meshes.push(houseFlashMesh);
     r.drawScene(meshes, {
       viewProj,
       camPos: eye,
@@ -730,6 +829,14 @@ function start(r) {
       }
       const showFinal = finalHere && (finalSeen || flash > 0.12);
 
+      // Her tape by the graves: seen once in a lightning flash from the graves, then it stays.
+      if (houseFlashMesh && !mystery.lightningSeen && flash > 0.12 && view.id === 'yard-graves' && !move) {
+        saveMystery({ ...mystery, lightningSeen: true }).then(() => {
+          rebuildTapes();
+          hint.show('there. between the stones.', 4000);
+        });
+      }
+
       // The pond: tapes float up while you watch, ripples spread, and sometimes the skeleton shows.
       let ripples = null, reveal = 0;
       if (shownArea === 'front-yard') {
@@ -747,11 +854,11 @@ function start(r) {
         reveal = revealAt(pond, now, flash);
       }
 
-      const viewProj = drawRoom(now, time, eye, target, flash, { ripples, reveal, showFinal });
+      const viewProj = drawRoom(now, time, eye, target, flash, { ripples, reveal, showFinal, showHouseFlash: flash > 0.12 });
       lastViewProj = viewProj;
 
       // The tape you're holding makes the whole picture worse, the way a bad tape would.
-      const held = carrying ? tapes.find((t) => t.id === carrying) : null;
+      const held = carrying ? tapeById(carrying) : null;
       const heldDecay = held ? levelOf(held) / MAX_DECAY : 0;
 
       const fadeIn = Math.min(1, since / (reduce ? 1400 : 1200));
@@ -786,9 +893,12 @@ function start(r) {
 
 /** Quiet lines the first time you reach a viewpoint in a session. */
 const FIRST_VISIT = {
-  'yard-gate': (t) => (t.length === 0
-    ? 'the porch light is on. somewhere inside, a vcr is waiting.'
-    : 'the house kept your tapes. some of them may be fading.'),
+  'yard-gate': (t) => {
+    if (!mystery.found.includes('house-1')) return 'the mailbox flag is up. someone left you something.';
+    return t.length === 0
+      ? 'the porch light is on. somewhere inside, a vcr is waiting.'
+      : 'the house kept your tapes. some of them may be fading.';
+  },
   'hall-entry': () => 'the house is quieter than the storm.',
   'living-room': (t) => (t.length === 0 ? 'the vcr blinks 00:00. it wants a tape.' : null),
   'yard-pond': () => 'the water is very still.',

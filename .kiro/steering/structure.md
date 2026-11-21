@@ -10,7 +10,7 @@ rewind-1970/
 │   ├── steering/        # product, art style, tech, structure rules
 │   ├── specs/           # one folder per system: requirements, design, tasks
 │   └── hooks/           # agent hooks that keep code consistent with specs (planned)
-├── index.html           # stage, dialogs (tape writer, settings, playback)
+├── index.html           # stage, dialogs (tape writer, settings, playback, case)
 ├── style.css
 ├── package.json         # scripts only: test, serve. No dependencies.
 ├── LICENSE              # MIT
@@ -25,11 +25,12 @@ rewind-1970/
 │   │   ├── tapes/       # tape model, placement, hints, cassette meshes and piles, rewind
 │   │   ├── decay/       # decay curve and stages, word drift
 │   │   ├── pond/        # ripples, glimpses of the skeleton, noticing the secret
-│   │   └── endings/     # unlock, choosing the ending, the final tape's script and timeline
+│   │   ├── endings/     # unlock, choosing the ending, the final tape's script and timeline
+│   │   └── mystery/     # the previous resident's tapes, when they appear, the case
 │   ├── storage/         # IndexedDB access
 │   ├── audio/           # Web Audio synth: hiss, rain, thunder, tape motor, rewind whirr
 │   └── ui/              # DOM overlays: tape writer, playback, settings + text-only reader,
-│                        #   exit arrows, hints
+│                        #   exit arrows, hints, the case dialog
 ├── tests/               # node:test unit tests for pure logic
 └── docs/
     └── writeup.md       # hackathon write-up (planned)

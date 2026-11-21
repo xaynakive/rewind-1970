@@ -32,6 +32,8 @@ All 10 hiding spots can be reached. Carry a tape from anywhere in the house to t
 
 - **The endings.** Once you have at least 5 tapes and have found every one, something appears in the VCR, at first only when the sky lights up. Play it. It's a tape you never recorded, made from your own memories, and which of four endings it becomes depends on how well you kept them.
 
+- **Whose house is this?** Someone lived here before you. Five of her tapes, dated Oct 31 1970, are hidden around the house. The first waits in the mailbox; the others show up when you watch the lightning, notice what's in the pond, rewind your own memories, and find the rest. Rewind each one to hear the end of it, then answer the house at the TV (or from settings). Solve it with your own tapes in fair shape and the final tape becomes a fifth ending.
+
 Next: polish (sound, small things that change when you're not looking) and the write-up. See `.kiro/specs/*/tasks.md`.
 
 ## Run locally
@@ -64,7 +66,7 @@ npm test
 This project is spec-first. Everything in `.kiro/` is part of the entry:
 
 - **`.kiro/steering/`**: the rules every change follows. `product.md` covers tone ("suggestion over shock", decay never deletes a memory). `art-style.md` covers the PS1 rendering rules, triangle budgets, the 9-colour palette and flashing limits. `tech.md` covers the stack and conventions, including the decision record for raw WebGL. `structure.md` covers the layout.
-- **`.kiro/specs/`**: one spec per system (cold open, tapes, decay, house, pond, endings). Each has requirements written as acceptance criteria, a design, and a task list that is ticked off as the code lands.
+- **`.kiro/specs/`**: one spec per system (cold open, tapes, decay, house, pond, endings, mystery). Each has requirements written as acceptance criteria, a design, and a task list that is ticked off as the code lands.
 - Pure logic named in the specs (decay curve, tape placement, lightning timing, boot lines) is covered by unit tests in `tests/`, which check the acceptance criteria directly.
 
 ## Accessibility

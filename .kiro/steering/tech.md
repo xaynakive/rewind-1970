@@ -6,7 +6,7 @@ inclusion: always
 
 ## Stack
 - Plain JavaScript ES modules. No framework, no build step, no runtime dependencies. This matches the rest of Elsewhere, and the app works fully offline.
-- Raw WebGL 1 for rendering, with a two-pass pipeline in `src/render/`: the PS1 scene pass into a 320×240 target, then the VHS pass to the screen.
+- Raw WebGL 1 for rendering, with a two-pass pipeline in `src/render/`: the PS1 scene pass into a low-res target 288 lines tall whose width follows the screen, then the picture pass (VHS damage, glow, grading, scanlines) to the screen.
 - GLSL ES 1.0 shaders are kept as strings in `src/render/shaders.js`, so they load without a build step or extra requests.
 - Text drawn on the tape (boot screen, on-screen display) uses the built-in 5×7 bitmap font in `src/render/bitmapFont.js`, never system fonts. This keeps it identical on every device.
 - Web Audio API for all sound, synthesized in code. No audio files.

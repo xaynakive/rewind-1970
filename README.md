@@ -12,7 +12,7 @@ Spooky, never gore. Your memories never leave your device.
 
 Working now:
 - Cold open: a found-tape boot screen in a pixel VCR font, with tracking lines, colour bleed and grain.
-- **The whole house**, in a low-poly PS1 style (wobbling vertices, a 320×240 render, dithering, fog):
+- **The whole house**, in a low-poly PS1 style (wobbling vertices, a low-res 288-line picture, dithering, fog), filling the whole tab with glow, colour grading and scanlines:
   - the front yard in the rain: the gate, a mailbox with its flag up, three graves, a dead tree, the pond and a blood moon
   - the hallway, with an attic hatch hanging open and stairs going up
   - the living room, with the TV, the VCR and a flickering CRT glow
@@ -68,6 +68,9 @@ This project is spec-first. Everything in `.kiro/` is part of the entry:
 - Pure logic named in the specs (decay curve, tape placement, lightning timing, boot lines) is covered by unit tests in `tests/`, which check the acceptance criteria directly.
 
 ## Accessibility
+
+- **Brightness** slider and **clear picture** in settings, for low vision. The default picture is bright, and both turn up automatically when the system asks for more contrast.
+- **Full screen** button, or press F.
 
 - **Reduce flashing** replaces lightning flashes and glitches with slow fades no brighter than 50%. It is on by default when the system prefers reduced motion.
 - Every object you can select is a real button: it works with a mouse, touch, the keyboard, and screen readers.

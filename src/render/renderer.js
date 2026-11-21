@@ -1,11 +1,26 @@
-// Two-pass renderer: the scene draws into a 320x240 target (PS1 pass),
-// then the VHS pass draws a texture (scene or 2D canvas) to the screen.
+// Two-pass renderer: the scene draws into a low-resolution target (the PS1
+// pass), then the picture pass (VHS damage, glow, grading, scanlines) draws a
+// texture, the scene or a 2D canvas, to the full screen.
+//
+// The low-res target is always LOW_H lines tall; its width follows the
+// screen's shape, so the picture fills the whole tab at any size.
 
 import { sceneVertex, sceneFragment, vhsVertex, vhsFragment } from './shaders.js';
 import { FLOATS_PER_VERTEX } from './mesh.js';
 
-export const LOW_W = 320;
-export const LOW_H = 240;
+export const LOW_H = 288;
+export const MAX_ASPECT = 2.4;
+export const MIN_LOW_W = 220;
+/** Shape of the 2D canvases (boot screen, final tape): 320x240. They're fitted, never stretched. */
+export const CANVAS_ASPECT = 4 / 3;
+
+/** Low-res target size for a screen of w x h CSS pixels. */
+export function lowResFor(w, h) {
+  const aspect = Math.min(MAX_ASPECT, Math.max(0.4, w / Math.max(1, h)));
+  // Tall phone screens get more lines, so the picture is never narrower than MIN_LOW_W.
+  const lines = Math.max(LOW_H, Math.round(MIN_LOW_W / aspect));
+  return { w: Math.round(lines * aspect), h: lines };
+}
 
 function compile(gl, type, src) {
   const s = gl.createShader(type);
@@ -58,7 +73,7 @@ function build(gl, canvas) {
   const sceneU = uniforms(gl, sceneProg, [
     'uViewProj', 'uSnapRes', 'uAmbient', 'uLightPos', 'uLightColor', 'uLightRange',
     'uFlashDir', 'uFlash', 'uFlashColor', 'uSky', 'uCamPos', 'uFog', 'uFogColor', 'uTime',
-    'uRipples', 'uReveal', 'uWater',
+    'uRipples', 'uReveal', 'uWater', 'uGamma',
   ]);
   const noRipples = new Float32Array(24).fill(-1);
   const sceneA = {
@@ -67,48 +82,63 @@ function build(gl, canvas) {
     color: gl.getAttribLocation(sceneProg, 'aColor'),
     emissive: gl.getAttribLocation(sceneProg, 'aEmissive'),
   };
-  const vhsU = uniforms(gl, vhsProg, ['uTex', 'uOsd', 'uOsdOn', 'uTime', 'uTracking', 'uBleed', 'uNoise', 'uGlitch', 'uFade', 'uReduce']);
+  const vhsU = uniforms(gl, vhsProg, [
+    'uTex', 'uOsd', 'uOsdOn', 'uTime', 'uTracking', 'uBleed', 'uNoise', 'uGlitch', 'uFade', 'uReduce',
+    'uLowRes', 'uTexRes', 'uContain', 'uScreenAspect', 'uSrcAspect', 'uBloom', 'uScan', 'uGrade',
+  ]);
   const vhsPos = gl.getAttribLocation(vhsProg, 'aPos');
 
-  // Low-res scene target.
+  // Low-res scene target, resized with the screen.
   const sceneTex = nearestTexture(gl);
-  gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, LOW_W, LOW_H, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
   const depth = gl.createRenderbuffer();
-  gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
-  gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, LOW_W, LOW_H);
   const fbo = gl.createFramebuffer();
-  gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, sceneTex, 0);
-  gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
-  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  let low = { w: 0, h: 0 };
+  function setLowRes(w, h) {
+    if (w === low.w && h === low.h) return;
+    low = { w, h };
+    gl.bindTexture(gl.TEXTURE_2D, sceneTex);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
+    gl.bindRenderbuffer(gl.RENDERBUFFER, depth);
+    gl.renderbufferStorage(gl.RENDERBUFFER, gl.DEPTH_COMPONENT16, w, h);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, sceneTex, 0);
+    gl.framebufferRenderbuffer(gl.FRAMEBUFFER, gl.DEPTH_ATTACHMENT, gl.RENDERBUFFER, depth);
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  }
+  setLowRes(Math.round(LOW_H * CANVAS_ASPECT), LOW_H);
 
   const canvasTex = nearestTexture(gl);
   const osdTex = nearestTexture(gl);
   gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, 1, 1, 0, gl.RGBA, gl.UNSIGNED_BYTE, new Uint8Array(4));
+  let canvasSize = [320, 240];
 
   const triangle = gl.createBuffer();
   gl.bindBuffer(gl.ARRAY_BUFFER, triangle);
   gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
 
-  const meshes = new Set();
+  /** Picture settings: gamma lifts the shadows; `clear` turns the film damage down for low vision. */
+  let picture = { gamma: 1.7, clear: false };
 
   return {
     gl,
+    get lowRes() { return { ...low }; },
+
+    setPicture(next) {
+      picture = { ...picture, ...next };
+    },
 
     createMesh(data) {
       const buffer = gl.createBuffer();
       gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
       gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
-      const mesh = { buffer, count: data.length / FLOATS_PER_VERTEX };
-      meshes.add(mesh);
-      return mesh;
+      return { buffer, count: data.length / FLOATS_PER_VERTEX };
     },
 
     disposeMesh(mesh) {
       gl.deleteBuffer(mesh.buffer);
-      meshes.delete(mesh);
     },
 
+    /** Fits the screen canvas and the low-res target to a w x h CSS-pixel stage. */
     resize(cssW, cssH) {
       const dpr = Math.min(window.devicePixelRatio || 1, 2);
       const w = Math.max(1, Math.round(cssW * dpr));
@@ -117,20 +147,23 @@ function build(gl, canvas) {
         canvas.width = w;
         canvas.height = h;
       }
+      const lr = lowResFor(cssW, cssH);
+      setLowRes(lr.w, lr.h);
     },
 
     /** Draws meshes into the low-res target. */
     drawScene(meshList, f) {
       gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
-      gl.viewport(0, 0, LOW_W, LOW_H);
-      gl.clearColor(f.fogColor[0], f.fogColor[1], f.fogColor[2], 1);
+      gl.viewport(0, 0, low.w, low.h);
+      const fog = f.fogColor.map((c) => c ** (1 / picture.gamma));
+      gl.clearColor(fog[0], fog[1], fog[2], 1);
       gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
       gl.enable(gl.DEPTH_TEST);
       gl.disable(gl.CULL_FACE);
       gl.useProgram(sceneProg);
 
       gl.uniformMatrix4fv(sceneU.uViewProj, false, f.viewProj);
-      gl.uniform2f(sceneU.uSnapRes, LOW_W / 2, LOW_H / 2);
+      gl.uniform2f(sceneU.uSnapRes, low.w / 2, low.h / 2);
       gl.uniform3fv(sceneU.uAmbient, f.ambient);
       gl.uniform3fv(sceneU.uLightPos, f.lights.flatMap((l) => l.pos));
       gl.uniform3fv(sceneU.uLightColor, f.lights.flatMap((l) => l.color.map((c) => c * l.intensity)));
@@ -146,6 +179,7 @@ function build(gl, canvas) {
       gl.uniform3fv(sceneU.uRipples, f.ripples ?? noRipples);
       gl.uniform1f(sceneU.uReveal, f.reveal ?? 0);
       gl.uniform3fv(sceneU.uWater, f.water ?? [0, 0, 0]);
+      gl.uniform1f(sceneU.uGamma, picture.gamma);
 
       const stride = FLOATS_PER_VERTEX * 4;
       for (const a of Object.values(sceneA)) gl.enableVertexAttribArray(a);
@@ -161,7 +195,7 @@ function build(gl, canvas) {
     },
 
     /**
-     * Uploads a 2D canvas: 'main' is a VHS source (the boot screen),
+     * Uploads a 2D canvas: 'main' is a picture source (boot screen, final tape),
      * 'osd' is the transparent on-screen display drawn over the scene.
      */
     uploadCanvas(source, which = 'main') {
@@ -169,16 +203,20 @@ function build(gl, canvas) {
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, source);
       gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      if (which === 'main') canvasSize = [source.width, source.height];
     },
 
-    /** VHS pass to the screen. */
+    /** Picture pass to the screen. */
     present(p) {
+      // Clear picture: much less damage, softer scanlines, still the same mood.
+      const k = picture.clear ? 0.3 : 1;
+      const fromCanvas = p.source === 'canvas';
       gl.bindFramebuffer(gl.FRAMEBUFFER, null);
       gl.viewport(0, 0, canvas.width, canvas.height);
       gl.disable(gl.DEPTH_TEST);
       gl.useProgram(vhsProg);
       gl.activeTexture(gl.TEXTURE0);
-      gl.bindTexture(gl.TEXTURE_2D, p.source === 'canvas' ? canvasTex : sceneTex);
+      gl.bindTexture(gl.TEXTURE_2D, fromCanvas ? canvasTex : sceneTex);
       gl.uniform1i(vhsU.uTex, 0);
       gl.activeTexture(gl.TEXTURE1);
       gl.bindTexture(gl.TEXTURE_2D, osdTex);
@@ -186,12 +224,20 @@ function build(gl, canvas) {
       gl.uniform1f(vhsU.uOsdOn, p.osd ? 1 : 0);
       gl.activeTexture(gl.TEXTURE0);
       gl.uniform1f(vhsU.uTime, p.time);
-      gl.uniform1f(vhsU.uTracking, p.tracking);
-      gl.uniform1f(vhsU.uBleed, p.bleed);
-      gl.uniform1f(vhsU.uNoise, p.noise);
-      gl.uniform1f(vhsU.uGlitch, p.glitch);
+      gl.uniform1f(vhsU.uTracking, p.tracking * k);
+      gl.uniform1f(vhsU.uBleed, p.bleed * (picture.clear ? 0.5 : 1));
+      gl.uniform1f(vhsU.uNoise, p.noise * k);
+      gl.uniform1f(vhsU.uGlitch, p.glitch * (picture.clear ? 0.5 : 1));
       gl.uniform1f(vhsU.uFade, p.fade);
       gl.uniform1f(vhsU.uReduce, p.reduce ? 1 : 0);
+      gl.uniform2f(vhsU.uLowRes, low.w, low.h);
+      gl.uniform2f(vhsU.uTexRes, ...(fromCanvas ? canvasSize : [low.w, low.h]));
+      gl.uniform1f(vhsU.uContain, fromCanvas ? 1 : 0);
+      gl.uniform1f(vhsU.uScreenAspect, canvas.width / canvas.height);
+      gl.uniform1f(vhsU.uSrcAspect, canvasSize[0] / canvasSize[1]);
+      gl.uniform1f(vhsU.uBloom, p.bloom ?? 1);
+      gl.uniform1f(vhsU.uScan, picture.clear ? 0.35 : 1);
+      gl.uniform1f(vhsU.uGrade, fromCanvas ? 0.4 : 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle);
       gl.enableVertexAttribArray(vhsPos);
       gl.vertexAttribPointer(vhsPos, 2, gl.FLOAT, false, 0, 0);

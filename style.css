@@ -19,15 +19,12 @@ html, body {
   overflow: hidden;
 }
 
-body {
-  display: grid;
-  place-items: center;
-}
-
+/* The picture fills the whole tab, like a game. */
 #stage {
-  position: relative;
-  width: min(100vw, calc(100dvh * 4 / 3));
-  aspect-ratio: 4 / 3;
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100dvh;
   touch-action: none;
   user-select: none;
   -webkit-user-select: none;
@@ -98,16 +95,16 @@ body {
   align-items: center;
   gap: 0.45em;
   pointer-events: auto;
-  background: rgba(7, 6, 10, 0.35);
-  border: 1px solid rgba(216, 207, 180, 0.18);
-  color: var(--tape-label);
+  background: rgba(7, 6, 10, 0.55);
+  border: 1px solid rgba(216, 207, 180, 0.4);
+  color: #f1e9d2;
   font: inherit;
-  font-size: clamp(11px, 1.7vw, 15px);
-  letter-spacing: 0.12em;
-  padding: 0.55em 0.8em;
-  min-height: 44px;
+  font-size: clamp(14px, 1.6vw, 19px);
+  letter-spacing: 0.1em;
+  padding: 0.55em 0.9em;
+  min-height: 48px;
   cursor: pointer;
-  opacity: 0.55;
+  opacity: 0.85;
   transition: opacity 0.2s, border-color 0.2s;
   text-shadow: 1px 0 rgba(138, 28, 28, 0.7), -1px 0 rgba(127, 184, 164, 0.5);
 }
@@ -119,20 +116,6 @@ body {
 .nav-back { left: 50%; bottom: 15%; transform: translateX(-50%); }
 .nav-left { left: 2%; top: 50%; transform: translateY(-50%); }
 .nav-right { right: 2%; top: 50%; transform: translateY(-50%); flex-direction: row-reverse; }
-
-/* Portrait phones: the 4:3 tape is letterboxed, so put the exits in the
-   empty space above and below it instead of over the picture.
-   (The stage is 75vw tall and centred, so its edges are 50dvh ± 37.5vw.) */
-@media (max-aspect-ratio: 3/4) {
-  #nav { position: fixed; inset: 0; }
-  .nav-arrow { opacity: 0.8; }
-  .nav-forward { top: calc(50dvh - 37.5vw - 56px); }
-  .nav-left,
-  .nav-right { top: calc(50dvh + 37.5vw + 12px); transform: none; }
-  .nav-left { left: 3%; }
-  .nav-right { right: 3%; }
-  .nav-back { top: calc(50dvh + 37.5vw + 68px); bottom: auto; }
-}
 
 /* Arrow shapes drawn in CSS, so they don't depend on installed fonts. */
 .nav-shape { width: 0.7em; height: 0.7em; background: currentColor; flex: none; }
@@ -151,14 +134,17 @@ body {
   margin: 0;
   width: 86%;
   text-align: center;
-  font-size: clamp(12px, 2vw, 18px);
+  font-size: clamp(16px, 2.1vw, 26px);
   font-style: italic;
   letter-spacing: 0.04em;
+  color: #f4ecd6;
+  /* A soft dark halo so the words stay readable over any part of the picture. */
+  text-shadow: 0 0 6px #000, 0 0 14px rgba(0, 0, 0, 0.9), 0 1px 2px #000;
   opacity: 0;
   transition: opacity 1.2s ease;
   pointer-events: none;
 }
-.hint.visible { opacity: 0.9; }
+.hint.visible { opacity: 1; }
 
 /* ---------- panels ---------- */
 
@@ -201,7 +187,7 @@ body {
 
 .actions { display: flex; gap: 0.6rem; justify-content: flex-end; flex-wrap: wrap; margin-top: 0.6rem; }
 .panel button,
-.settings-button {
+.corner-button {
   background: transparent;
   color: var(--tape-label);
   border: 1px solid #5a5446;
@@ -212,8 +198,8 @@ body {
 }
 .panel button:hover,
 .panel button:focus-visible,
-.settings-button:hover,
-.settings-button:focus-visible { border-color: var(--tape-label); outline: none; }
+.corner-button:hover,
+.corner-button:focus-visible { border-color: var(--tape-label); outline: none; }
 .panel button[type="submit"] { border-color: var(--crt-glow); color: var(--crt-glow); }
 .panel button.danger { border-color: #6b2a26; color: #e2786f; }
 .panel button:disabled { opacity: 0.5; cursor: wait; }
@@ -229,16 +215,27 @@ body {
 .reader-empty { opacity: 0.6; border: 0 !important; padding: 0 !important; }
 .settings-status { min-height: 1.2em; font-size: 0.85rem; opacity: 0.8; }
 
-.settings-button {
+.corner-buttons {
   position: fixed;
   right: 12px;
   bottom: 12px;
-  font-size: 0.75rem;
-  opacity: 0.45;
+  display: flex;
+  gap: 8px;
+  z-index: 5;
+}
+.corner-button {
+  font-size: 0.85rem;
+  min-height: 40px;
+  opacity: 0.7;
   background: rgba(7, 6, 10, 0.6);
 }
-.settings-button:hover,
-.settings-button:focus-visible { opacity: 1; }
+.corner-button[hidden] { display: none; }
+.corner-button:hover,
+.corner-button:focus-visible { opacity: 1; }
+
+.slider { display: grid; grid-template-columns: auto 1fr; gap: 0.3rem 0.8rem; align-items: center; margin: 0.6rem 0; }
+.slider input { accent-color: var(--crt-glow); width: 100%; min-height: 32px; }
+.slider .toggle-note { grid-column: 2; }
 
 .no-webgl {
   position: absolute;

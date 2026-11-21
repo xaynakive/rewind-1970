@@ -106,12 +106,17 @@ void main() {
 }
 `;
 
-/** Fog, 4x4 Bayer dithering, 5 bits per channel. */
+/**
+ * Fog, brightness (gamma lift, so dark rooms stay readable), richer colour,
+ * 4x4 Bayer dithering, 6 bits per channel. Brightness is applied before the
+ * colours are reduced, so lifted shadows dither instead of banding.
+ */
 export const sceneFragment = `
 precision mediump float;
 varying vec3 vColor;
 varying float vFog;
 uniform vec3 uFogColor;
+uniform float uGamma;
 
 float bayer2(vec2 a) { return mod(2.0 * a.x + 3.0 * a.y, 4.0); }
 float bayer4(vec2 p) {
@@ -120,9 +125,16 @@ float bayer4(vec2 p) {
 }
 
 void main() {
-  vec3 col = mix(vColor, uFogColor, vFog);
-  col += (bayer4(gl_FragCoord.xy) - 0.47) / 31.0;
-  col = floor(clamp(col, 0.0, 1.0) * 31.0 + 0.5) / 31.0;
+  vec3 col = max(mix(vColor, uFogColor, vFog), vec3(0.0));
+  // Bright light can push a channel past 1. Scale the whole colour down
+  // instead of clipping each channel, so lit orange stays orange (not yellow-green).
+  col /= max(1.0, max(col.r, max(col.g, col.b)));
+  col = pow(col, vec3(1.0 / uGamma));
+  float l = dot(col, vec3(0.299, 0.587, 0.114));
+  col = mix(vec3(l), col, 1.3);
+  col /= max(1.0, max(col.r, max(col.g, col.b)));
+  col += (bayer4(gl_FragCoord.xy) - 0.47) / 63.0;
+  col = floor(clamp(col, 0.0, 1.0) * 63.0 + 0.5) / 63.0;
   gl_FragColor = vec4(col, 1.0);
 }
 `;
@@ -136,7 +148,11 @@ void main() {
 }
 `;
 
-/** VHS pass: line jitter, rolling tracking band, glitch, colour bleed, grain, scanlines. */
+/**
+ * Picture pass: VHS damage (line jitter, rolling tracking band, glitch, colour
+ * bleed, grain), then the cinematic finish: glow around bright things, colour
+ * grading (cool shadows, warm highlights), scanlines and a soft vignette.
+ */
 export const vhsFragment = `
 precision mediump float;
 varying vec2 vUv;
@@ -150,13 +166,39 @@ uniform float uNoise;
 uniform float uGlitch;
 uniform float uFade;
 uniform float uReduce;
+uniform vec2 uLowRes;       // low-res picture size (lines, pixels)
+uniform vec2 uTexRes;       // size of the source texture
+uniform float uContain;     // 1: fit a 4:3 canvas inside the screen without stretching
+uniform float uScreenAspect;
+uniform float uSrcAspect;
+uniform float uBloom;
+uniform float uScan;        // scanline strength (lower in clear-picture mode)
+uniform float uGrade;       // how much colour grading to apply
 
 float hash(vec2 p) { return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }
+
+vec3 glow(vec2 uv) {
+  vec2 px = 1.0 / uTexRes;
+  vec3 sum = vec3(0.0);
+  for (int i = 0; i < 8; i++) {
+    float a = float(i) * 0.785398;
+    vec2 d = vec2(cos(a), sin(a));
+    sum += max(texture2D(uTex, uv + d * px * 2.5).rgb - 0.6, 0.0);
+    sum += max(texture2D(uTex, uv + d * px * 6.0).rgb - 0.6, 0.0) * 0.6;
+  }
+  return sum / 8.0;
+}
 
 void main() {
   float t = uReduce > 0.5 ? 0.0 : uTime;
   vec2 uv = vUv;
-  float line = floor(uv.y * 240.0);
+  if (uContain > 0.5) {
+    float s = uScreenAspect / uSrcAspect;
+    if (s > 1.0) uv.x = (uv.x - 0.5) * s + 0.5;
+    else uv.y = (uv.y - 0.5) / s + 0.5;
+  }
+  float inside = step(0.0, uv.x) * step(uv.x, 1.0) * step(0.0, uv.y) * step(uv.y, 1.0);
+  float line = floor(uv.y * uLowRes.y);
 
   uv.x += (hash(vec2(line, floor(t * 24.0))) - 0.5) * 0.003 * uTracking;
 
@@ -174,7 +216,18 @@ void main() {
   col.g = texture2D(uTex, uv).g;
   col.b = texture2D(uTex, uv - vec2(off, 0.0)).b;
 
+  col = (col + glow(uv) * 1.1 * uBloom) * inside;
+
+  // Colour grading: a little contrast, teal in the shadows, warmth in the light.
+  float l = dot(col, vec3(0.299, 0.587, 0.114));
+  vec3 c01 = clamp(col, 0.0, 1.0);
+  vec3 graded = mix(col, c01 * c01 * (3.0 - 2.0 * c01), 0.35);
+  graded += vec3(-0.012, 0.012, 0.035) * (1.0 - smoothstep(0.0, 0.45, l));
+  graded *= mix(vec3(1.0), vec3(1.07, 1.0, 0.9), smoothstep(0.35, 1.0, l));
+  col = mix(col, graded, uGrade);
+
   // On-screen display, recorded "into" the tape so it bleeds and jitters too.
+  // (The OSD is only shown over the scene, which always fills the screen.)
   vec4 oR = texture2D(uOsd, uv + vec2(off * 1.5, 0.0));
   vec4 oG = texture2D(uOsd, uv);
   vec4 oB = texture2D(uOsd, uv - vec2(off * 1.5, 0.0));
@@ -182,13 +235,16 @@ void main() {
   col.g = mix(col.g, oG.g, oG.a * uOsdOn);
   col.b = mix(col.b, oB.b, oB.a * uOsdOn);
 
-  float n = hash(floor(vUv * vec2(320.0, 240.0)) + fract(t * 7.0) * 113.0);
+  float n = hash(floor(vUv * uLowRes) + fract(t * 7.0) * 113.0);
   col += (n - 0.5) * uNoise;
-  col += band * 0.12 * hash(vec2(floor(vUv.x * 320.0), line + t));
-  col *= 0.9 + 0.1 * step(0.5, fract(vUv.y * 240.0));
+  col += band * 0.12 * hash(vec2(floor(vUv.x * uLowRes.x), line + t));
+
+  // Scanlines: a dark gap at the bottom of every picture line.
+  float row = fract(vUv.y * uLowRes.y);
+  col *= 1.0 - uScan * 0.28 * smoothstep(0.55, 0.95, row);
 
   vec2 v = vUv - 0.5;
-  col *= 1.0 - dot(v, v) * 0.9;
+  col *= 1.0 - dot(v, v) * 0.55;
 
   gl_FragColor = vec4(col * uFade, 1.0);
 }

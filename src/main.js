@@ -22,7 +22,8 @@ import { idle, startRewind, tickRewind, releaseRewind, rewindProgress, applyRewi
 import { decayLevel, MAX_DECAY } from './systems/decay/decay.js';
 import { openTapeStore } from './storage/tapeStore.js';
 import { createAudio } from './audio/audio.js';
-import { loadSettings, saveSettings, timeScale } from './core/settings.js';
+import { loadSettings, saveSettings, timeScale, brightnessToGamma } from './core/settings.js';
+import { fovForAspect } from './render/camera.js';
 import { createTapeWriter } from './ui/tapeWriter.js';
 import { createSettingsPanel } from './ui/settingsPanel.js';
 import { createPlayback } from './ui/playback.js';
@@ -90,6 +91,7 @@ const panel = createSettingsPanel($('#settings'), {
     saveSettings(settings);
     panel.update(settings);
     audio.setEnabled(settings.sound);
+    applyPicture();
     if (demoChanged) tapesChanged();
   },
   listTapes: async () => tapes,
@@ -109,6 +111,34 @@ $('#settings').addEventListener('close', () => {
   if (openedByPointer) requestAnimationFrame(() => document.activeElement?.blur());
 });
 
+// Full screen, like a game: the button, or F. The picture already fills the tab.
+const fullscreenButton = $('#fullscreen-button');
+const canFullscreen = Boolean(document.documentElement.requestFullscreen);
+fullscreenButton.hidden = !canFullscreen;
+function toggleFullscreen() {
+  if (!canFullscreen) return;
+  if (document.fullscreenElement) document.exitFullscreen?.();
+  else document.documentElement.requestFullscreen().catch(() => {});
+}
+fullscreenButton.addEventListener('click', (e) => {
+  toggleFullscreen();
+  if (e.detail > 0) fullscreenButton.blur();
+});
+document.addEventListener('fullscreenchange', () => {
+  fullscreenButton.textContent = document.fullscreenElement ? 'exit full screen' : 'full screen';
+});
+window.addEventListener('keydown', (e) => {
+  if ((e.key === 'f' || e.key === 'F') && !e.repeat && !e.ctrlKey && !e.metaKey && !e.altKey
+    && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)
+    && !document.querySelector('dialog[open]')) {
+    toggleFullscreen();
+  }
+});
+
+function applyPicture() {
+  renderer?.setPicture({ gamma: brightnessToGamma(settings.brightness), clear: settings.clearPicture });
+}
+
 if (!store.persistent) {
   setTimeout(() => hint.show("this tape won't survive the night (storage is off in this browser)", 6000), 1500);
 }
@@ -125,15 +155,21 @@ if (!renderer) {
   stage.classList.add('no-webgl');
   $('#no-webgl').hidden = false;
 } else {
+  applyPicture();
   start(renderer);
 }
 
 function start(r) {
   const house = buildHouse();
   const loader = createAreaLoader(r, house);
-  const FOV = (58 * Math.PI) / 180;
-  const projIndoors = perspective(FOV, 4 / 3, 0.1, 20);
-  const projOutdoors = perspective(FOV, 4 / 3, 0.15, 70);
+  // Projection follows the screen's shape (see fovForAspect).
+  let projIndoors = perspective(fovForAspect(4 / 3), 4 / 3, 0.1, 20);
+  let projOutdoors = perspective(fovForAspect(4 / 3), 4 / 3, 0.15, 70);
+  function setAspect(aspect) {
+    const fov = fovForAspect(aspect);
+    projIndoors = perspective(fov, aspect, 0.1, 20);
+    projOutdoors = perspective(fov, aspect, 0.15, 70);
+  }
   const look = createLook(stage);
 
   /** Where the player stands, and the move in progress (if any). */
@@ -421,6 +457,14 @@ function start(r) {
   new ResizeObserver(([entry]) => {
     size = { w: entry.contentRect.width, h: entry.contentRect.height };
     r.resize(size.w, size.h);
+    setAspect(size.w / Math.max(1, size.h));
+    // The on-screen display matches the picture's size, so its text stays crisp and in the corners.
+    const lr = r.lowRes;
+    if (osdCanvas.width !== lr.w || osdCanvas.height !== lr.h) {
+      osdCanvas.width = lr.w;
+      osdCanvas.height = lr.h;
+      osdKey = '';
+    }
   }).observe(stage);
 
   // ----- cold open -----
@@ -481,7 +525,12 @@ function start(r) {
     const key = `${time}|${rewinding}|${steps}|${holding ? 1 : 0}`;
     if (key === osdKey) return;
     osdKey = key;
-    osdCtx.clearRect(0, 0, 320, 240);
+    const W = osdCanvas.width, H = osdCanvas.height;
+    // Narrow (phone) pictures: a smaller clock, lifted above the corner buttons.
+    const narrow = W < 300;
+    const clockScale = narrow ? 1 : 2;
+    const clockY = H - 28 - (narrow ? Math.ceil((60 * H) / Math.max(1, size.h)) : 0);
+    osdCtx.clearRect(0, 0, W, H);
     osdCtx.fillStyle = '#d8cfb4';
     if (rewinding) {
       drawText(osdCtx, '\u25C0\u25C0 REW', 16, 14, 2);
@@ -492,8 +541,8 @@ function start(r) {
     } else {
       drawText(osdCtx, 'PLAY \u25B6', 16, 14, 2);
     }
-    if (holding) drawText(osdCtx, '\u25A0 TAPE', 320 - 16 - 72, 14, 2);
-    drawText(osdCtx, time, 16, 212, 2);
+    if (holding) drawText(osdCtx, '\u25A0 TAPE', W - 16 - 72, 14, 2);
+    drawText(osdCtx, time, 16, clockY, clockScale);
     r.uploadCanvas(osdCanvas, 'osd');
   }
 

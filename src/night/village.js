@@ -16,6 +16,7 @@ import {
   buildSchool, CLASS, CORRIDOR, MUSIC, PERIOD, LOOP_AT, SCHOOL_ROUTE, MUSIC_ROUTE, SCHOOL_ITEM_IDS, CORRIDOR_LINES, CORRIDOR_PASS,
 } from './school.js';
 import { buildYeonhwa, YEONHWA, FLOOR, YEONHWA_ROUTE, YEONHWA_ITEM_IDS } from './yeonhwa.js';
+import { buildTapes, TAPE_IDS } from './tapes.js';
 import { boundsOf, grow, footprint, noteMesh, inspectOf } from '../systems/memory/market.js';
 
 
@@ -283,6 +284,7 @@ export function buildVillage() {
   buildWol({ mb, revealed, colliders, parts, items, hides, lights, readables, ghosts });
   const boards = [];
   buildSchool({ mb, revealed, colliders, parts, items, hides, lights, readables, boards });
+  buildTapes({ mb, colliders, items, readables });
   buildRain(rain, rand);
 
   // ----- things to find -----
@@ -389,4 +391,4 @@ function waterMesh() {
   return mb.build();
 }
 
-export const VILLAGE_ITEM_IDS = ['memory-boat', 'note-water', ...YEONHWA_ITEM_IDS, ...WOL_ITEM_IDS, ...SCHOOL_ITEM_IDS];
+export const VILLAGE_ITEM_IDS = ['memory-boat', 'note-water', ...YEONHWA_ITEM_IDS, ...WOL_ITEM_IDS, ...SCHOOL_ITEM_IDS, ...TAPE_IDS];

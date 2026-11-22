@@ -11,6 +11,8 @@ import { pick, REACH } from '../systems/memory/reach.js';
 import { createPresence, tickPresence, wake, sees, resetAfterCatch } from '../systems/memory/presence.js';
 import { buildItemMesh } from '../systems/memory/market.js';
 import { buildFigure } from '../systems/memory/figures.js';
+import { MeshBuilder } from '../render/mesh.js';
+import { GLOW } from '../systems/house/palette.js';
 import { createStrike, flashIntensity, strikeLength, nextStrikeDelay } from '../systems/house/lightning.js';
 import { LOOP_MS, clockAt, isMidnight, waterAt, wakeAt, nameCallsDue, timecode, START_SEC } from './loop.js';
 import { createLens, setRecording, tickLens } from './lens.js';
@@ -18,8 +20,11 @@ import { withTaken, withNameChoice, nameDrawsHer, withLullaby } from './save.js'
 import { tune, tuneLength } from './lullaby.js';
 import {
   PROP_KINDS, SURFACES, createProps, settle, stepProp, launch, hearingRange, buildPropMesh, blockedAt, supportAt,
-  emptyHotbar, addToHotbar, selectSlot, cycleSlot, takeSelected,
+  emptyHotbar, addToHotbar, selectSlot, cycleSlot, takeSelected, makeProp,
 } from './props.js';
+import {
+  findRecipe, slotsUsed, wardHolds, wardCollider, humEffect, calmMs, HUM_COOLDOWN_MS, threadTarget, THREAD_MAX,
+} from './craft.js';
 
 const MOUSE_SENS = 0.0024;
 const TOUCH_LOOK = 0.006;
@@ -64,6 +69,12 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
   let musicUntil = 0;
   let lure = null; // { pos, until }: she is going to look at a noise
   let heardOnce = false;
+  // Making things, talismans, humming, the thread.
+  let madeCount = 0;
+  let wardSaid = false;
+  let humReadyAt = 0;
+  let threadSaid = false;
+  const threadGl = mk(threadMesh());
 
   // ----- state -----
   let save = saved;
@@ -101,7 +112,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
 
   const HANDLED = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight',
     'KeyE', 'Enter', 'Space', 'KeyL', 'KeyC', 'Tab', 'Escape', 'Equal', 'Minus', 'NumpadAdd', 'NumpadSubtract',
-    'KeyQ', 'KeyF', 'KeyG', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9'];
+    'KeyQ', 'KeyF', 'KeyG', 'KeyH', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9'];
   function onKeyDown(e) {
     if (paused()) return;
     const k = e.code;
@@ -114,6 +125,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     else if (k === 'KeyL') toggleCandle();
     else if (k === 'KeyQ') dropHeld();
     else if (k === 'KeyF' || k === 'KeyG') throwHeld();
+    else if (k === 'KeyH') hum();
     else if (k.startsWith('Digit')) selectHotbar(Number(k.slice(5)) - 1);
     else if (k === 'Tab') { releaseLock(); hud.openNotes(); }
     else if (k === 'Escape') {
@@ -256,6 +268,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     p.vel = [0, 0, 0];
     p.yaw = walker.yaw;
     p.pos = [x, supportAt(x, z, p, props, propWorld, 99).y + 0.12, z];
+    placed(p);
     refreshHotbar();
   }
   function throwHeld() {
@@ -266,8 +279,56 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     const dir = forwardOf(walker.yaw, walker.pitch);
     const from = [walker.pos[0] + dir[0] * 0.3, eyeY - 0.1, walker.pos[1] + dir[2] * 0.3];
     launch(p, from, dir);
+    placed(p);
     audio.knock({ freq: 900, q: 0.5, gain: 0.03, length: 0.18, rate: 0.4 }); // the whoosh
     refreshHotbar();
+  }
+  /** A talisman starts to burn the first time it leaves your hands. */
+  function placed(p) {
+    if (p.kind !== 'talisman' || p.placedAt != null) return;
+    p.placedAt = nightMs;
+    if (!wardSaid) { wardSaid = true; hud.say(level.lines.ward ?? 'you set the talisman down. its edges begin to glow.', 4500); }
+  }
+  function removeProp(p) {
+    const i = props.indexOf(p);
+    if (i >= 0) props.splice(i, 1);
+    propById.delete(p.id);
+  }
+  /** At Wol's desk: make the first thing you can from what you carry. */
+  function craft(rd) {
+    const kinds = hotbar.slots.map((id) => (id ? propById.get(id).kind : null));
+    const recipe = findRecipe(kinds);
+    if (!recipe) { hud.say(rd.lines[0], 6500); return; }
+    const used = slotsUsed(kinds, recipe);
+    const slots = hotbar.slots.slice();
+    for (const i of used) { removeProp(propById.get(slots[i])); slots[i] = null; }
+    const p = makeProp(`made-${madeCount++}`, recipe.makes, [walker.pos[0], eyeY, walker.pos[1]]);
+    p.held = true;
+    props.push(p);
+    propById.set(p.id, p);
+    propGl.set(p.id, mk(buildPropMesh(p.kind)));
+    hotbar = addToHotbar({ slots, selected: used[0] ?? hotbar.selected }, p.id) ?? { ...hotbar, slots };
+    refreshHotbar();
+    hud.say(recipe.line, 6000);
+    audio.knock({ freq: 2600, q: 1, gain: 0.04, length: 0.3, rate: 0.6 }); // paper
+  }
+  /** Hum what you know of her song. Close enough, she stops to listen. */
+  function hum() {
+    if (mode.kind !== 'walk' && mode.kind !== 'hidden') return;
+    const now = performance.now();
+    if (now < humReadyAt) { hud.say('your voice is still shaking. wait a little before you try again.', 2600); return; }
+    const pieces = save.lullaby;
+    const dist = Math.hypot(caller.pos[0] - walker.pos[0], caller.pos[1] - walker.pos[1]);
+    const effect = humEffect({ pieces, callerKind: caller.kind, dist });
+    if (effect === 'unknown') { hud.say("you try to hum, but you don't know the tune yet. someone in haewol must still have it.", 4200); return; }
+    humReadyAt = now + HUM_COOLDOWN_MS;
+    // Lower and softer than the music box: a voice.
+    for (const note of tune(pieces)) audio.chime?.(note.hz / 2, note.at, note.ms, 0.05);
+    if (effect === 'calms') {
+      caller = { ...caller, kind: 'patrol', since: now, blindUntil: now + calmMs(pieces) };
+      lure = null;
+      hud.say(level.lines.hum ?? 'you hum the song she knew. close by, the footsteps stop. she is listening.', 5000);
+    } else hud.say('you hum it to yourself, quietly. your heart slows a little.', 4000);
   }
   /** A thing landed. If she is near enough to hear it, she goes to look. */
   function heard(ev, kind, now) {
@@ -307,6 +368,24 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       return;
     }
     const rd = level.readables.find((x) => x.id === target);
+    if (rd && rd.craft) return craft(rd);
+    if (rd && rd.player) {
+      const have = rd.tapes.filter((t) => has(t.id));
+      if (!have.length) { hud.say(rd.empty, 4500); return; }
+      const lines = have.flatMap((t) => t.lines);
+      hud.say(lines.join(' '), 4000 + lines.length * 2400);
+      audio.staticBurst(0.3);
+      const music = Math.max(0, ...have.map((t) => t.music ?? 0));
+      if (music && performance.now() >= musicUntil) {
+        const n = Math.max(music, save.lullaby);
+        const delay = 2400 * (lines.length - 1);
+        for (const note of tune(n)) audio.chime?.(note.hz / 2, delay + note.at, note.ms, 0.05);
+        musicUntil = performance.now() + delay + tuneLength(n) + 600;
+        save = withLullaby(save, music);
+        onSave(save);
+      }
+      return;
+    }
     if (rd && rd.music) {
       if (performance.now() < musicUntil) return;
       const n = Math.max(rd.music, save.lullaby);
@@ -398,6 +477,11 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     return out;
   }
   let colliders = activeColliders();
+  /** What she can't walk through: walls, closed doors, and talismans that still burn. */
+  function callerColliders() {
+    const wards = props.filter((p) => p.kind === 'talisman' && !p.held && wardHolds(p.placedAt, nightMs));
+    return wards.length ? [...colliders, ...wards.map((p) => wardCollider(p.pos))] : colliders;
+  }
   const canSee = (a, b) => segmentClear(a, b, colliders);
   const inSafe = (p) => p[0] > level.safe.min[0] && p[0] < level.safe.max[0] && p[1] > level.safe.min[1] && p[1] < level.safe.max[1];
 
@@ -611,6 +695,14 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       if (lure && Math.hypot(caller.pos[0] - lure.pos[0], caller.pos[1] - lure.pos[1]) < 0.8) lure = null;
     }
     if (mode.kind === 'walk') walker = { ...walker, pos: step(walker, { forward: 0, strafe: 0 }, 0, colliders).pos };
+    // Talismans burn down, then are ash.
+    if (!frozen) {
+      for (const p of props.slice()) {
+        if (p.kind !== 'talisman' || p.placedAt == null || p.held || wardHolds(p.placedAt, nightMs)) continue;
+        removeProp(p);
+        hud.say(level.lines.ash ?? 'the talisman curls up into ash.', 3500);
+      }
+    }
 
     // Changing area: the rain, her route, a line the first time.
     const nowArea = areaAt(walker.pos);
@@ -668,7 +760,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     }
     if (!frozen && (mode.kind === 'walk' || mode.kind === 'hidden')) {
       const before = caller.pos;
-      const res = tickPresence(caller, { dt: sec, now, route, colliders, player: playerInfo(moved > 0, inWater), canSee, story: s.storyMode });
+      const res = tickPresence(caller, { dt: sec, now, route, colliders: callerColliders(), player: playerInfo(moved > 0, inWater), canSee, story: s.storyMode });
       caller = res.state;
       callerWalked += Math.hypot(caller.pos[0] - before[0], caller.pos[1] - before[1]);
       for (const ev of res.events) {
@@ -773,7 +865,22 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       const g = propGl.get(p.id);
       g.model = multiply(translation(p.pos), rotationY(p.yaw));
       g.highlight = target === p.id ? 0.45 : glintBase * 0.4;
+      if (p.kind === 'talisman' && wardHolds(p.placedAt, nightMs)) g.highlight = Math.max(g.highlight, 0.35 + 0.15 * Math.sin(time * 3));
       list.push(g);
+    }
+    // Through the lens: Sae's red thread, leading to the next memory.
+    const tid = lens.recording && mode.kind === 'walk' ? threadTarget(save.taken) : null;
+    const tItem = tid && itemById.get(tid);
+    if (tItem) {
+      const dx = tItem.pos[0] - walker.pos[0], dz = tItem.pos[2] - walker.pos[1];
+      const len = Math.min(THREAD_MAX, Math.hypot(dx, dz));
+      if (len > 0.6) {
+        const a = Math.atan2(dx, -dz);
+        threadGl.model = multiply(translation([walker.pos[0], eyeY - 0.85, walker.pos[1]]), multiply(rotationY(-a), stretchZ(len)));
+        threadGl.highlight = 0.2;
+        list.push(threadGl);
+        if (!threadSaid) { threadSaid = true; hud.say(level.lines.thread ?? 'through the lens, a red thread runs off into the dark. sae tied it to something.', 4500); }
+      }
     }
     const inHand = mode.kind === 'walk' ? held() : null;
     if (inHand) {
@@ -934,7 +1041,9 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     leave() { finish(onExit); },
     /** For the browser check (?debug). */
     debug: () => ({ walker, caller, mode: mode.kind, target, nightMs, waterY: waterAt(nightMs), lens, save, candle, hotbar, lure, props,
-      area: area?.id ?? null, corridorLoops, corridorPassed, boards: boards.map((b) => b.shown) }),
+      area: area?.id ?? null, corridorLoops, corridorPassed, boards: boards.map((b) => b.shown),
+      wards: props.filter((p) => p.kind === 'talisman' && wardHolds(p.placedAt, nightMs)).map((p) => [...p.pos]), humReadyAt, threadTarget: threadTarget(save.taken) }),
+    hum,
     drop: dropHeld,
     throwHeld,
     select: selectHotbar,
@@ -942,3 +1051,12 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     skipTo(ms) { nightMs = ms; },
   };
 }
+
+/** A stretch of red thread from the origin toward -z, one metre long; scaled along z by its model matrix. */
+function threadMesh() {
+  const mb = new MeshBuilder();
+  const n = 16;
+  for (let i = 0; i < n; i++) mb.box([0, Math.sin(i * 1.3) * 0.006, -(i + 0.5) / n], [0.035, 0.035, 1 / n + 0.002], [1, 0.08, 0.05], GLOW);
+  return mb.build();
+}
+const stretchZ = (k) => new Float32Array([1, 0, 0, 0, 0, 1, 0, 0, 0, 0, k, 0, 0, 0, 0, 1]);

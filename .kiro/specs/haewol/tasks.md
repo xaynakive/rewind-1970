@@ -14,11 +14,12 @@ Each milestone ends in something playable.
 - [x] 5. Carry anything: pick up, drop, throw and stack loose things; a 1-9 hotbar in the dock; thrown things make noise
 - [x] 6. The schoolroom: the chalkboard that writes back, Sae's desk, the corridor that grows
   - _Requirements: 6.4, 7.1, 7.2 (the first piece)_
-- [ ] 7. Crafting at Wol's desk and talismans you place; the lullaby, home tapes, red thread, offerings, and humming to the Caller
-  - _Requirements: 5.5, 7.2–7.5_
+- [x] 7. Crafting at Wol's desk and talismans you place; the lullaby, home tapes, red thread, offerings, and humming to the Caller
+  - The offerings are loose things now; laying them at the shrine is part of task 9.
+  - _Requirements: 5.5, 7.2–7.5, 12.7–12.8_
 - [ ] 8. The open village: lanes, an old bicycle, small errands for the ghosts
-- [ ] 9. The shrine on the hill, breathing, and the endings
-  - _Requirements: 6.5, 9.1–9.4, 9.6, 11.6_
+- [ ] 9. The shrine on the hill, breathing, laying the offerings, and the endings
+  - _Requirements: 6.5, 7.4, 9.1–9.4, 9.6, 11.6_
 - [ ] 10. The drowned village, the true night, and waking up
   - _Requirements: 6.6, 9.5, 11.6_
 - [ ] 11. Polish: phone check, brightness check, README, write-up, front page decision

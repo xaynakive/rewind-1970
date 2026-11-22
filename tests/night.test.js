@@ -475,3 +475,108 @@ test('the school words keep the tone', () => {
     ...village.corridor.lines, village.corridor.pass].join(' ').toLowerCase();
   for (const w of ['blood', 'gore', 'kill', 'dead body', 'corpse', 'drown', 'murder']) assert.ok(!words.includes(w), w);
 });
+
+// ----- making things, talismans, humming, tapes and the thread (Requirements 5.5, 7.2, 7.3, 7.5, 12.7) -----
+
+import {
+  RECIPES, findRecipe, slotsUsed, WARD_HALF, WARD_MS, wardHolds, wardCollider, humEffect, calmMs, HUM_RANGE,
+  threadTarget, THREAD_ORDER,
+} from '../src/night/craft.js';
+import { TAPES, TAPE_IDS } from '../src/night/tapes.js';
+import { createPresence, tickPresence, CATCH } from '../src/systems/memory/presence.js';
+import { makeProp, buildPropMesh, PROP_PLACES } from '../src/night/props.js';
+
+test('paper and ink make a talisman, paper and thread a boat; the ink and thread are kept', () => {
+  assert.equal(findRecipe(['paper', null, 'ink']).makes, 'talisman');
+  assert.equal(findRecipe(['thread', 'paper']).makes, 'boat');
+  assert.equal(findRecipe(['paper', 'stone']), null);
+  assert.equal(findRecipe(['ink', 'thread']), null, 'nothing to write or fold on');
+  const kinds = [null, 'ink', 'cup', 'paper', 'paper'];
+  const r = findRecipe(kinds);
+  assert.deepEqual(slotsUsed(kinds, r), [3], 'one sheet is used, the ink stays');
+  for (const rec of RECIPES) assert.ok(PROP_KINDS[rec.makes]?.made, rec.makes);
+});
+
+test('there is enough paper, ink and thread laid out, and every new kind has a mesh', () => {
+  const count = (k) => PROP_PLACES.filter((p) => p.kind === k).length;
+  assert.ok(count('paper') >= 2);
+  assert.ok(count('ink') >= 1 && count('thread') >= 1);
+  assert.ok(count('comb') >= 1 && count('coin') >= 1 && count('bowl') >= 1, 'offerings: rice bowl, comb, coin');
+  for (const k of Object.keys(PROP_KINDS)) assert.ok(buildPropMesh(k), k);
+  const p = makeProp('made-0', 'talisman', [1, 2, 3]);
+  assert.deepEqual(p.size, PROP_KINDS.talisman.size);
+  assert.ok(!p.resting && !p.held);
+});
+
+test("Wol's desk is where things are made, and it says how", () => {
+  const c = village.readables.find((r) => r.id === 'wol-craft');
+  assert.ok(c && c.craft);
+  assert.ok(/paper/.test(c.lines[0]) && /ink/.test(c.lines[0]) && /thread/.test(c.lines[0]));
+  const a = village.areas.find((x) => x.id === 'wol');
+  const cx = (c.bounds.min[0] + c.bounds.max[0]) / 2, cz = (c.bounds.min[2] + c.bounds.max[2]) / 2;
+  assert.ok(cx > a.min[0] && cx < a.max[0] && cz > a.min[1] && cz < a.max[1]);
+});
+
+test('a talisman burns for WARD_MS, and she cannot reach you while you stand by it', () => {
+  assert.ok(!wardHolds(undefined, 0));
+  assert.ok(wardHolds(1000, 1000 + WARD_MS - 1));
+  assert.ok(!wardHolds(1000, 1000 + WARD_MS));
+  // Open ground in the entry house's lee: she hunts you from 5 m with a talisman at your feet.
+  const me = [0, -2];
+  const ward = wardCollider([me[0], 0, me[1]]);
+  assert.ok(WARD_HALF + 0.35 > CATCH);
+  let s = { ...createPresence([[5, -2], [6, -2]]), kind: 'hunt', pos: [5, -2], lastSeen: [...me], lastSeenAt: 0, since: 0 };
+  const player = { pos: me, hidden: false, light: true, loud: false };
+  for (let i = 0; i < 600; i++) {
+    const res = tickPresence(s, { dt: 1 / 60, now: i * 16, route: [[5, -2], [6, -2]], colliders: [ward], player, canSee: () => true, story: false });
+    assert.ok(!res.events.includes('caught'), 'caught through a talisman');
+    s = res.state;
+  }
+  assert.ok(Math.hypot(s.pos[0] - me[0], s.pos[1] - me[1]) >= WARD_HALF, 'she stops at its edge');
+});
+
+test('humming needs the song; close enough, she stops to listen, longer the more you know', () => {
+  assert.equal(humEffect({ pieces: 0, callerKind: 'hunt', dist: 2 }), 'unknown');
+  assert.equal(humEffect({ pieces: 1, callerKind: 'hunt', dist: HUM_RANGE }), 'calms');
+  assert.equal(humEffect({ pieces: 1, callerKind: 'hunt', dist: HUM_RANGE + 1 }), 'alone');
+  assert.equal(humEffect({ pieces: 2, callerKind: 'dormant', dist: 1 }), 'alone');
+  assert.ok(calmMs(3) > calmMs(1) && calmMs(1) > 0);
+});
+
+test('three home tapes, one with a piece of the lullaby; the player in the entry house plays them', () => {
+  assert.equal(TAPES.length, 3);
+  for (const id of TAPE_IDS) {
+    const it = village.items.find((i) => i.id === id);
+    assert.equal(it.kind, 'tape', id);
+    assert.ok(VILLAGE_ITEM_IDS.includes(id));
+  }
+  assert.ok(TAPES.some((t) => t.music === 3));
+  const player = village.readables.find((r) => r.id === 'cassette-player');
+  assert.ok(player.player && player.empty);
+  const c = [(player.bounds.min[0] + player.bounds.max[0]) / 2, (player.bounds.min[2] + player.bounds.max[2]) / 2];
+  assert.ok(c[0] > village.safe.min[0] && c[0] < village.safe.max[0] && c[1] > village.safe.min[1] && c[1] < village.safe.max[1], 'in the safe house');
+  const hum = TAPES.find((t) => t.music);
+  assert.equal(hum.inside, 'chest-drawer');
+});
+
+test('the lullaby comes from the music box, the record and a tape, one piece each', () => {
+  const sources = [
+    ...village.readables.filter((r) => r.music).map((r) => r.music),
+    ...TAPES.filter((t) => t.music).map((t) => t.music),
+  ].sort();
+  assert.deepEqual(sources, [1, 2, 3]);
+  assert.ok(PIECES.length >= 4, 'the last piece is left for the drowned village');
+});
+
+test('the red thread leads through the memories in order, and stops when they are all found', () => {
+  assert.equal(threadTarget([]), 'memory-boat');
+  assert.equal(threadTarget(['memory-boat', 'note-water']), 'memory-tape');
+  assert.equal(threadTarget(THREAD_ORDER), null);
+  for (const id of THREAD_ORDER) assert.equal(village.items.find((i) => i.id === id)?.kind, 'memory', id);
+});
+
+test('the new words keep the tone', () => {
+  const words = [...RECIPES.map((r) => r.line), ...TAPES.flatMap((t) => [t.text, ...t.lines]),
+    ...village.readables.flatMap((r) => r.lines ?? [])].join(' ').toLowerCase();
+  for (const w of ['blood', 'gore', 'kill', 'dead body', 'corpse', 'drown', 'murder']) assert.ok(!words.includes(w), w);
+});

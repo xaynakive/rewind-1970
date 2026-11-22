@@ -23,6 +23,16 @@ export const PROP_KINDS = {
   cushion: { name: 'a floor cushion', size: [0.46, 0.09, 0.46], color: [0.36, 0.14, 0.13], sound: 'cloth' },
   chalk: { name: 'a stick of chalk', size: [0.07, 0.014, 0.014], color: [0.92, 0.92, 0.88], sound: 'stone' },
   block: { name: 'a wooden block', size: [0.1, 0.1, 0.1], color: [0.7, 0.52, 0.3], sound: 'wood' },
+  // Things to make things with, at Wol's desk.
+  paper: { name: 'a clean sheet of paper', size: [0.21, 0.004, 0.15], color: [0.92, 0.9, 0.84], sound: 'cloth' },
+  ink: { name: 'an ink stick', size: [0.08, 0.02, 0.025], color: [0.08, 0.08, 0.09], sound: 'stone' },
+  thread: { name: 'a spool of red thread', size: [0.05, 0.05, 0.05], color: [0.86, 0.1, 0.07], sound: 'wood' },
+  // What you make.
+  talisman: { name: 'a talisman', size: [0.08, 0.004, 0.2], color: [0.95, 0.82, 0.35], sound: 'cloth', made: true },
+  boat: { name: 'a paper boat you folded', size: [0.18, 0.07, 0.09], color: [0.92, 0.9, 0.84], sound: 'cloth', made: true },
+  // Offerings.
+  comb: { name: 'a wooden comb', size: [0.1, 0.012, 0.04], color: [0.6, 0.42, 0.24], sound: 'wood' },
+  coin: { name: 'an old coin', size: [0.03, 0.004, 0.03], color: [0.72, 0.58, 0.3], sound: 'stone' },
 };
 
 /** Flat tops you can set things on: { min:[x,z], max:[x,z], y }. */
@@ -65,6 +75,16 @@ export const PROP_PLACES = [
   { kind: 'block', at: [-9.75, -22.55] },
   { kind: 'cushion', at: [-0.8, -52.2] },
   { kind: 'bowl', at: [-3.5, -52.45] },
+  // Paper, ink and thread: what Wol's desk can make things from.
+  { kind: 'paper', at: [-1.8, 8.6] },
+  { kind: 'paper', at: [-8.4, -22.45] },
+  { kind: 'paper', at: [14.45, 1.25] },
+  { kind: 'ink', at: [14.75, 1.14] },
+  { kind: 'thread', at: [-19.0, -7.9] },
+  { kind: 'thread', at: [20.6, -1.75] },
+  // Offerings.
+  { kind: 'comb', at: [-15.1, -3.2] },
+  { kind: 'coin', at: [0.48, 11.55] },
 ];
 
 // ---------- the hotbar ----------
@@ -108,11 +128,12 @@ const inRect = (x, z, r, pad = 0) => x > r.min[0] - pad && x < r.max[0] + pad &&
  */
 
 export function createProps(places = PROP_PLACES) {
-  return places.map((p, i) => ({
-    id: `prop-${i}`, kind: p.kind, size: PROP_KINDS[p.kind].size,
-    pos: [p.at[0], 5, p.at[1]], vel: [0, 0, 0], yaw: ((i * 2.399) % 6.283) - 3.14,
-    resting: false, held: false, floating: false,
-  }));
+  return places.map((p, i) => makeProp(`prop-${i}`, p.kind, [p.at[0], 5, p.at[1]], ((i * 2.399) % 6.283) - 3.14));
+}
+
+/** A new loose thing (one you made, or one laid out at 23:58). */
+export function makeProp(id, kind, pos, yaw = 0) {
+  return { id, kind, size: PROP_KINDS[kind].size, pos: [...pos], vel: [0, 0, 0], yaw, resting: false, held: false, floating: false };
 }
 
 /** The height something of footprint `self` would rest at, at (x, z), counting only what is below `fromY`. */
@@ -246,6 +267,38 @@ export function buildPropMesh(kind) {
     case 'cushion':
       mb.box([0, h / 2, 0], [w, h, d], c);
       mb.box([0, h, 0], [w * 0.7, 0.01, d * 0.7], dark);
+      break;
+    case 'paper':
+      mb.box([0, h / 2, 0], [w, h, d], c);
+      break;
+    case 'ink':
+      mb.box([0, h / 2, 0], [w, h, d], c);
+      mb.box([w * 0.2, h + 0.001, 0], [w * 0.4, 0.002, d * 0.6], [0.55, 0.45, 0.2]);
+      break;
+    case 'thread':
+      mb.box([0, h / 2, 0], [w * 0.7, h * 0.8, d * 0.7], c);
+      for (const y of [0.004, h - 0.004]) mb.box([0, y, 0], [w, 0.008, d], [0.5, 0.36, 0.2]);
+      break;
+    case 'talisman':
+      mb.box([0, h / 2, 0], [w, h, d], c);
+      // The sign, in red.
+      mb.box([0, h + 0.001, 0], [0.012, 0.002, d * 0.8], [0.75, 0.08, 0.05]);
+      for (const z of [-0.05, 0, 0.05]) mb.box([0, h + 0.001, z], [w * 0.6, 0.002, 0.01], [0.75, 0.08, 0.05]);
+      break;
+    case 'boat':
+      mb.box([0, 0.015, 0], [w * 0.6, 0.03, d * 0.7], c);
+      mb.box([0, 0.03, 0], [w, 0.02, d * 0.5], c);
+      mb.box([0, 0.05, 0], [w * 0.3, 0.04, 0.005], c);
+      mb.box([w * 0.5, 0.03, 0], [0.04, 0.006, 0.006], [0.86, 0.1, 0.07]);
+      break;
+    case 'comb':
+      mb.box([0, h / 2, -d * 0.25], [w, h, d * 0.5], c);
+      for (let i = 0; i < 9; i++) mb.box([-w / 2 + 0.006 + i * (w - 0.012) / 8, h / 2, d * 0.2], [0.004, h, d * 0.5], c);
+      break;
+    case 'coin':
+      mb.box([0, h / 2, 0], [w, h, d * 0.6], c);
+      mb.box([0, h / 2, 0], [w * 0.6, h, d], c);
+      mb.box([0, h + 0.001, 0], [w * 0.3, 0.002, d * 0.3], dark);
       break;
     default:
       mb.box([0, h / 2, 0], [w, h, d], c);

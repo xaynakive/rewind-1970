@@ -66,7 +66,7 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 2. WHEN she is near or starts to hunt THEN the rain SHALL go quiet and a cassette SHALL be heard rewinding.
 3. She SHALL see farther when the user's candle or camcorder is on, or when the user has answered to Sae's name more often.
 4. The user SHALL be able to hide (wardrobes, under desks).
-5. Humming the completed lullaby SHALL make her stop and listen once per loop.
+5. Humming (H, or the hum button) SHALL play as much of the lullaby as the user has heard. WHEN she is awake and within 12 m THEN she SHALL stop hunting and be unable to see the user for 3 s per piece known. Humming SHALL rest for 20 s between tries. With no pieces heard, it SHALL say the tune isn't known yet.
 6. Story mode SHALL work as in the memories spec: she never hunts.
 7. She SHALL be shown only as a figure in red with wet hair over her face.
 
@@ -86,10 +86,10 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 ### Requirement 7: Things to find
 #### Acceptance criteria
 1. **Seven memories.** Keeping one plays a short flashback (lines over a tinted, damaged picture).
-2. **The lullaby**, a few notes at a time (a music box, humming, a scratched record). There SHALL be four pieces. Each source SHALL play every piece found so far, in order, and the number found SHALL be saved.
-3. **Home tapes** to play on found recorders: lore only.
-4. **Offerings** (rice, a comb, a coin, a paper boat), laid at the shrine in the right order.
-5. **Red thread:** Sae ties it to what matters. Through the lens it leads to the next important thing.
+2. **The lullaby**, a few notes at a time (a music box, humming, a scratched record). There SHALL be four pieces. Each source SHALL play every piece found so far, in order, and the number found SHALL be saved. Sources: the music box in the school (1), the scratched record in Wol's herb room (2), Sae humming on a home tape (3). The fourth is left for the drowned village.
+3. **Home tapes** to play on found recorders: lore only. Three tapes (Yeonhwa's front room, the teacher's desk, Yeonhwa's chest drawer) SHALL play, in order, on the little player in the entry house, which SHALL say when the user has none.
+4. **Offerings** (rice, a comb, a coin, a paper boat), laid at the shrine in the right order. The rice bowl, comb and coin SHALL be loose things; the boat SHALL be made at Wol's desk. Laying them down comes with the shrine (task 9).
+5. **Red thread:** Sae ties it to what matters. Through the lens it SHALL lead, from in front of the user and up to 7 m long, toward the next memory not yet found (boat, tape, ribbon, telegram, spectacles, drawing), and SHALL be gone once they are all found.
 6. **The scratched photograph:** one face removed in every copy.
 
 ### Requirement 8: The name
@@ -137,3 +137,5 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 4. F (or the throw button) SHALL throw it. Thrown things SHALL stop at walls, bounce, land on floors, tables and other things, and float on the flood water.
 5. A landing SHALL make a sound for its material. If the Caller is patrolling or searching within hearing range (3 m plus 1.6 m per unit of impact, up to 16 m), she SHALL go to look at the spot for up to 9 s. Story mode SHALL turn this off.
 6. Loose things SHALL reset every night. Memories and notes are not loose things.
+7. **Making things:** at Wol's desk (her brush), paper with ink SHALL make a talisman, and paper with thread SHALL make a paper boat. The paper SHALL be used up; the ink and thread SHALL be kept. With neither recipe in hand, the desk SHALL say what makes what.
+8. **Talismans:** a talisman set down or thrown SHALL glow and burn for 30 s of night time. While it burns, the Caller SHALL be unable to step within 0.9 m of it (a square), so she can't catch someone standing over it. Then it SHALL turn to ash.

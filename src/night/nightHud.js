@@ -42,6 +42,7 @@ export function createNightHud(root, dialogs, handlers) {
   const tapBtn = (b, fn) => b?.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
   tapBtn(dropBtn, () => handlers.onDrop?.());
   tapBtn(throwBtn, () => handlers.onThrow?.());
+  tapBtn($('[data-mem="hum"]'), () => handlers.onHum?.());
   let nameTimer = 0;
   let lastHeld = null;
   let keptCount = 0, heldCount = 0;
@@ -67,8 +68,8 @@ export function createNightHud(root, dialogs, handlers) {
     show() {
       base.show();
       help.textContent = base.isTouch
-        ? 'drag on the left to walk, on the right to look. tap use when something is named. lens raises the camcorder.'
-        : 'click to look around. W A S D to walk, E to use or pick up, 1-9 or the wheel to choose, Q to drop, F to throw. hold C or the right mouse button for the camcorder, L for the candle, shift to sneak, tab for notes, esc to pause.';
+        ? 'drag on the left to walk, on the right to look. tap use when something is named. lens raises the camcorder. hum sings what you know of her song.'
+        : 'click to look around. W A S D to walk, E to use or pick up, 1-9 or the wheel to choose, Q to drop, F to throw, H to hum. hold C or the right mouse button for the camcorder, L for the candle, shift to sneak, tab for notes, esc to pause.';
     },
 
     /** The viewfinder: REC, the battery, a frame. `level` 0..100. */

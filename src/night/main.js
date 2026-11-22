@@ -96,6 +96,7 @@ const hud = createNightHud($('#memory-hud'), { pause: pauseDialog, notes: $('#me
   onSlot: (i) => night?.select(i),
   onDrop: () => night?.drop(),
   onThrow: () => night?.throwHeld(),
+  onHum: () => night?.hum(),
   onResume: () => {},
   onLeave: () => night?.leave(),
   onStoryMode: (on) => { settings = { ...settings, storyMode: on }; saveSettings(settings); },

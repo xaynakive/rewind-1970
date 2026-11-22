@@ -15,6 +15,8 @@
   | `wol.js` | Wol's house | builds meshes |
   | `school.js` | the schoolroom, its corridor and the music room | builds meshes |
   | `lullaby.js` | the lullaby in pieces, as notes | yes |
+  | `craft.js` | recipes, talismans, humming, where the red thread leads | yes |
+  | `tapes.js` | the home tapes and the player in the entry house | builds meshes |
   | `props.js` | loose things: kinds, where they lie, tables, the hotbar, falling, stacking, floating, hearing | yes (plus meshes) |
   | `nightScene.js` | runs one night: input, walking, opening, inspect, the Caller, water, lens, name, drawing | no |
   | `nightHud.js` | the memory HUD plus the island, the notification, the dock, title cards, the viewfinder and flashbacks | no |
@@ -145,3 +147,13 @@ Inspect is always film. HUD pieces sit in the bars: the island in the top bar, t
 - **Physics** (`stepProp`, 60 steps a second is plenty): gravity, then x and z moved separately; a blocked axis bounces back at 35%. Walls (level colliders) are infinitely tall; a table's collider only stops what is below its top. `supportAt(x, z, self, props, world, fromY)` is the highest of the ground, the flood water in the sunken courtyard (floating), table tops and the tops of resting props under the footprint, counting only what is below `fromY`. A hard landing bounces once; a resting prop whose support is taken away falls again.
 - **Hearing:** a landing with impact over 0.8 is an event `{pos, loud, water}`. `hearingRange` = min(16, 3 + 1.6 × loud), ×1.2 in water. In the scene, a patrolling or searching Caller in range switches to `search` toward the spot and keeps searching (her `since` is held back) until she gets within 0.8 m or 9 s pass. The first time a night, a line plays.
 - **Drawing:** one mesh per prop. The held one is drawn small at the lower right of the view.
+
+## Making and calming (`craft.js`, `tapes.js`; Requirements 5.5, 7.2–7.5, 12.7–12.8)
+- **New loose things:** `paper` (entry house table, teacher's desk, Wol's desk), `ink` (Wol's desk), `thread` (Sae's room, the herb table), the offerings `comb` (Yeonhwa's table) and `coin` (the TV cabinet), and what you make: `talisman`, `boat` (`made: true`). Each has a mesh and a drawn hotbar icon.
+- **Making:** `wol-craft` is a readable with `craft: true` on her brush. `findRecipe(kinds)` checks `RECIPES` in order: `{ uses, tools, makes, line }`. `slotsUsed` names the slots whose things are used up. The scene removes those props, makes a new one with `makeProp('made-N', kind, pos)` and a fresh mesh, and puts it in the first freed slot.
+- **Talismans:** dropping or throwing a talisman sets `placedAt = nightMs` (once). While `wardHolds(placedAt, nightMs)` (30 s) and it isn't held, `callerColliders()` adds `wardCollider(pos)` (±0.9 m) to the colliders passed to `tickPresence`. She walks into it like a wall; line of sight and your own walking are unchanged. With her radius (0.35) she stops 1.25 m from its centre, beyond `CATCH` (0.85). After 30 s the prop is removed and a line plays. It glows while it burns.
+- **Humming:** H or the hum button. `humEffect({ pieces, callerKind, dist })` is `unknown` (no pieces), `calms` (awake and within `HUM_RANGE` 12 m) or `alone`. Calming sets her to `patrol` with `blindUntil = now + calmMs(pieces)` (3 s a piece) and drops any lure. The tune plays an octave below the music box at gain 0.05. 20 s rest between hums (real time).
+- **The lullaby sources:** `music: 1` music box (school), `music: 2` gramophone (Wol's herb room, x 21.4 z 1.3), `music: 3` the tape `tape-hum`.
+- **Home tapes:** `TAPES` are items of kind `tape` (a dock icon), each with `lines` and an optional `music`. The `cassette-player` readable (`player: true`, on the entry house floor by the west wall) says every line of the tapes you have, in `TAPES` order, then plays the tune if one of them carries music, and saves `withLullaby`.
+- **The red thread:** while recording and walking, `threadTarget(save.taken)` is the first of `THREAD_ORDER` not yet taken. One unit mesh (a glowing strand from the origin toward −z) is drawn from the walker at knee height, turned toward the item, and stretched along z to `min(7, distance)`. A line plays the first time each night.
+

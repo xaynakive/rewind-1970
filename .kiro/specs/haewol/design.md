@@ -13,6 +13,7 @@
   | `village.js` | the entry house and the courtyard, and the level data that joins every place | builds meshes |
   | `yeonhwa.js` | Yeonhwa's house | builds meshes |
   | `wol.js` | Wol's house | builds meshes |
+  | `props.js` | loose things: kinds, where they lie, tables, the hotbar, falling, stacking, floating, hearing | yes (plus meshes) |
   | `nightScene.js` | runs one night: input, walking, opening, inspect, the Caller, water, lens, name, drawing | no |
   | `nightHud.js` | the memory HUD plus the island, the notification, the dock, title cards, the viewfinder and flashbacks | no |
 - Shared change: `renderer.present` takes an optional `scan` (scanline strength, default 1). Only Haewol passes it; the house game looks the same.
@@ -117,3 +118,10 @@ Inspect is always film. HUD pieces sit in the bars: the island in the top bar, t
 - **Title cards:** `hud.titleCard(title, sub)` at every night start: black for 1.6 s, fading to the scene, text fading out at 4.2 s. Words from `nightTitle(loops)`.
 - **Lock screen:** the pause dialog. Grouped rows with switches (CSS on the checkboxes), the brightness slider, and the three actions pinned at the bottom.
 - The bars setting is stored apart from the shared settings, in `localStorage` key `rewind-1970:haewol-view`.
+
+## Carrying (`props.js`, Requirement 12)
+- **Kinds:** `PROP_KINDS` gives each a name, a size (bottom at y 0), a colour and a sound (`ceramic`, `wood`, `stone`, `cloth`). `PROP_PLACES` puts 19 of them around the entry house, the courtyard and both houses. `SURFACES` lists the table tops (`{min, max, y}`); the level can pass its own as `level.surfaces`.
+- **Hotbar:** `{ slots: (id|null)[9], selected }`. `addToHotbar` fills the selected slot if free, else the first free one, else returns null. `takeSelected` empties the selected slot.
+- **Physics** (`stepProp`, 60 steps a second is plenty): gravity, then x and z moved separately; a blocked axis bounces back at 35%. Walls (level colliders) are infinitely tall; a table's collider only stops what is below its top. `supportAt(x, z, self, props, world, fromY)` is the highest of the ground, the flood water in the sunken courtyard (floating), table tops and the tops of resting props under the footprint, counting only what is below `fromY`. A hard landing bounces once; a resting prop whose support is taken away falls again.
+- **Hearing:** a landing with impact over 0.8 is an event `{pos, loud, water}`. `hearingRange` = min(16, 3 + 1.6 × loud), ×1.2 in water. In the scene, a patrolling or searching Caller in range switches to `search` toward the spot and keeps searching (her `since` is held back) until she gets within 0.8 m or 9 s pass. The first time a night, a line plays.
+- **Drawing:** one mesh per prop. The held one is drawn small at the lower right of the view.

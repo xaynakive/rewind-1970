@@ -123,3 +123,13 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 4. Raising the camcorder SHALL pull the bars away and switch to the tape picture with its PLAY and timecode. Lowering it SHALL return to the film.
 5. All text SHALL stay large and high-contrast. Reduce flashing and reduced motion SHALL stop the grain and the animations.
 6. **Planned:** breathing as an action, and a last ending where Byeol wakes at dawn and changes (tasks 6-7).
+
+### Requirement 12: Carry anything
+**User story:** As Byeol, I want to pick up and use the loose things in the dream, like in Minecraft, so the world feels touchable.
+#### Acceptance criteria
+1. Loose things (cups, bowls, books, stones, a bucket, a fallen lantern, herbs, a cushion, wooden blocks) SHALL lie in every place. Looking at one SHALL offer "pick up".
+2. Picked-up things SHALL go into a 9-slot hotbar in the dock. Keys 1-9 or the mouse wheel (or tapping a slot) SHALL choose the one in your hand, which SHALL show in the right of the frame. A full hotbar SHALL say so.
+3. Q (or the drop button) SHALL set the held thing down in front of you, or on top of the thing you're looking at, so things stack. Taking away what's underneath SHALL make the rest fall.
+4. F (or the throw button) SHALL throw it. Thrown things SHALL stop at walls, bounce, land on floors, tables and other things, and float on the flood water.
+5. A landing SHALL make a sound for its material. If the Caller is patrolling or searching within hearing range (3 m plus 1.6 m per unit of impact, up to 16 m), she SHALL go to look at the spot for up to 9 s. Story mode SHALL turn this off.
+6. Loose things SHALL reset every night. Memories and notes are not loose things.

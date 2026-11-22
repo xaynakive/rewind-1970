@@ -49,3 +49,8 @@ export function loadSave(storage = globalThis.localStorage) {
 export function storeSave(s, storage = globalThis.localStorage) {
   try { storage.setItem(SAVE_KEY, JSON.stringify(s)); } catch { /* this visit only */ }
 }
+
+/** The lullaby is heard in pieces; keep the most heard. */
+export function withLullaby(s, pieces) {
+  return { ...s, lullaby: Math.max(s.lullaby, Math.min(7, Math.floor(pieces))) };
+}

@@ -155,6 +155,7 @@ export function buildWol(v) {
         'memory-telegram': 'home soon, it said. the bus over the pass never came.',
         'photo-scratched': 'i took my own face out of every picture. i could not take it out of what i did.',
         'memory-spectacles': 'i left them on the page. i knew what she would do.',
+        'memory-drawing': 'beside a child\'s drawing, pressed flat: she asked me to wait with her for the bus. i said it was too wet. i said tomorrow.',
       },
     });
     // The desk drawer: it slides out toward the room.

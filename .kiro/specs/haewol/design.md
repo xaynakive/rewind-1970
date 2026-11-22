@@ -13,10 +13,12 @@
   | `village.js` | the entry house and the courtyard, and the level data that joins every place | builds meshes |
   | `yeonhwa.js` | Yeonhwa's house | builds meshes |
   | `wol.js` | Wol's house | builds meshes |
+  | `school.js` | the schoolroom, its corridor and the music room | builds meshes |
+  | `lullaby.js` | the lullaby in pieces, as notes | yes |
   | `props.js` | loose things: kinds, where they lie, tables, the hotbar, falling, stacking, floating, hearing | yes (plus meshes) |
   | `nightScene.js` | runs one night: input, walking, opening, inspect, the Caller, water, lens, name, drawing | no |
   | `nightHud.js` | the memory HUD plus the island, the notification, the dock, title cards, the viewfinder and flashbacks | no |
-- Shared change: `renderer.present` takes an optional `scan` (scanline strength, default 1). Only Haewol passes it; the house game looks the same.
+- Shared changes: `renderer.present` takes an optional `scan` (scanline strength, default 1), and `audio.chime(hz, delayMs, ms, gain)` plays a soft bell note. Only Haewol uses them; the house game looks and sounds the same.
 - Shared, unchanged: the rest of `src/render/*`, `src/audio/audio.js`, `src/core/settings.js`, `src/systems/memory/{walker,reach,presence,figures}.js`, `buildItemMesh`, `noteMesh`, `inspectOf` and friends from `market.js`.
 - `nightScene.js` started as a copy of `memoryScene.js`. The input code is duplicated on purpose so the house game's verified memories are not touched. Fold it into a shared module once both are stable.
 
@@ -45,6 +47,7 @@ Coordinates as in the memories spec: yaw 0 looks toward −z.
 - `strong`: she sees you as if your light were up, all the time.
 - `route`: while you are in the area she walks this route. She switches only while patrolling: she reappears at the waypoint farthest from you, blind for 2.5 s, and `callerLine` plays with the rewind whirr. While hunting or searching she keeps following you on foot, so a door between you matters.
 - `enterLine` plays the first time each night.
+- `fog`: optional `{near, far}` that replaces the level fog while you are inside (the corridor uses 1.5..8.5 so its end is never visible).
 
 ## Yeonhwa's house (`yeonhwa.js`)
 x −24..−12, z 2..−14, floor raised to 0.3 m, walls of old smoke-dark paper. Her front door slides open off the courtyard at z −5.
@@ -75,6 +78,23 @@ Through the lens: a pale margin line beside every note pinned in the study, and 
 - **Readables with answers:** `{ intro, answers: { [itemId]: line }, fallback }`. Reading shows the intro, then one line for each item you carry that has an answer, or the fallback if none does. Every memory has an answer, so the book is worth visiting again each loop.
 - **Revealed items:** `revealed: true` items are drawn, and can be reached, only while recording.
 - **Ghosts:** `level.ghosts: { id, pos, yaw, scale, y, look, line }`. Drawn only through the lens within 12 m; the line plays the first time you are within 7 m while recording. They never move or catch.
+
+## The schoolroom (`school.js`)
+North of the courtyard, dug into the hill. The north courtyard wall has a gap at x −5.6..−4.4. The door (`school-door`) needs `memory-spectacles`; its `openLine` reads the notice through them.
+
+| Place | Bounds | What is there |
+|---|---|---|
+| classroom (`school`) | x −11..−1, z −16.3..−23 | small desks, the teacher's desk, the chalkboard on the north wall. **Sae's desk** (lid) holds **memory: sae's drawing** (flashback 16:10: the class goes home early; she stays to finish it and takes a clean sheet for a boat). The attendance register. The cleaning cupboard is a hiding place |
+| corridor (`corridor`) | x −3..−1.4, z −23..−47 | identical lamps and doors every 6 m (`PERIOD`) |
+| music room (`music`) | x −6..1, z −47..−53 | the organ, the songbook, the music box on a stool. The curtain is a hiding place |
+
+She walks `SCHOOL_ROUTE` in the classroom and corridor, `MUSIC_ROUTE` in the music room.
+
+### New rules used here
+- **Boards:** `level.boards: { id, area, label, intro, lines, meshes, bounds, center }`, one mesh per line. `shown` starts at 1 each night. While you are in `area`, walking or hidden, and your view is more than ~57° from the board's centre (dot < 0.55) for 3 s, `shown` goes up by one and a quiet chalk scrape plays. Using the board reads the lines shown so far.
+- **The corridor loop:** `level.corridor: { area, at: LOOP_AT (−35), back: PERIOD, lines, pass }`. Walking past `at` while moving without Shift moves you (and her, if she is in the corridor) `back` metres north and plays the next of `lines`. Moving with Shift, or arriving still, sets `corridorPassed` and plays `pass` if you had been sent back. Leaving the corridor northward resets it.
+- **Music readables:** a readable with `music: n` plays `tune(max(n, save.lullaby))` through `audio.chime` and saves `withLullaby(save, n)`. It can't be restarted until the tune ends.
+- **The lullaby** (`lullaby.js`): `PIECES` is four phrases of `[semitones above A4, beats]`, `BEAT_MS` 420, one beat of rest between phrases. `tune(n)` returns `{hz, at, ms}` for the first `n` pieces.
 
 ## The lens (`lens.js`)
 - Battery 100 at the start of a loop; recording drains 2.2 a second (45 s of recording a night). It recovers 0.5 a second when not recording.

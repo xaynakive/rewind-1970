@@ -8,7 +8,7 @@ import { MeshBuilder } from '../render/mesh.js';
 export const HOTBAR_SIZE = 9;
 export const GRAVITY = 9.8;
 export const THROW_SPEED = 7;
-export const BOUNDS = { min: [-25, -17], max: [23, 13] };
+export const BOUNDS = { min: [-25, -54], max: [23, 13] };
 const PAD = 0.06; // how close a prop's centre may come to a wall
 
 /** What each kind looks like, how big it is (w, h, d; bottom at y = 0), and what it sounds like. */
@@ -21,6 +21,7 @@ export const PROP_KINDS = {
   lantern: { name: 'a fallen lantern', size: [0.22, 0.3, 0.22], color: [0.62, 0.1, 0.07], sound: 'cloth' },
   herbs: { name: 'a bundle of herbs', size: [0.12, 0.08, 0.24], color: [0.3, 0.34, 0.18], sound: 'cloth' },
   cushion: { name: 'a floor cushion', size: [0.46, 0.09, 0.46], color: [0.36, 0.14, 0.13], sound: 'cloth' },
+  chalk: { name: 'a stick of chalk', size: [0.07, 0.014, 0.014], color: [0.92, 0.92, 0.88], sound: 'stone' },
   block: { name: 'a wooden block', size: [0.1, 0.1, 0.1], color: [0.7, 0.52, 0.3], sound: 'wood' },
 };
 
@@ -32,6 +33,8 @@ export const SURFACES = [
   { id: 'yeonhwa-table', min: [-15.65, -3.9], max: [-14.35, -3.1], y: 0.64 },
   { id: 'wol-desk', min: [14.27, 1.08], max: [15.73, 1.82], y: 0.745 },
   { id: 'herb-table', min: [19.2, -1.9], max: [20.8, -1.1], y: 1.11 },
+  { id: 'teacher-desk', min: [-8.92, -22.62], max: [-7.88, -22.08], y: 0.75 },
+  { id: 'organ', min: [-3.7, -52.75], max: [-2.3, -52.25], y: 1.1 },
 ];
 
 /** Where things lie at 23:58. y is worked out by `settle`. */
@@ -55,6 +58,13 @@ export const PROP_PLACES = [
   { kind: 'herbs', at: [19.6, -1.3] },
   { kind: 'book', at: [13.4, -1.0] },
   { kind: 'stone', at: [16.0, -7.0] },
+  { kind: 'chalk', at: [-8.7, -22.3] },
+  { kind: 'chalk', at: [-4.6, -22.6] },
+  { kind: 'book', at: [-4.3, -19.0] },
+  { kind: 'block', at: [-9.6, -22.4] },
+  { kind: 'block', at: [-9.75, -22.55] },
+  { kind: 'cushion', at: [-0.8, -52.2] },
+  { kind: 'bowl', at: [-3.5, -52.45] },
 ];
 
 // ---------- the hotbar ----------

@@ -12,6 +12,9 @@ import {
   wallZ, wallX, eaves, lantern,
 } from './pieces.js';
 import { buildWol, WOL, WOL_FLOOR, WOL_ROUTE, WOL_ITEM_IDS } from './wol.js';
+import {
+  buildSchool, CLASS, CORRIDOR, MUSIC, PERIOD, LOOP_AT, SCHOOL_ROUTE, MUSIC_ROUTE, SCHOOL_ITEM_IDS, CORRIDOR_LINES, CORRIDOR_PASS,
+} from './school.js';
 import { buildYeonhwa, YEONHWA, FLOOR, YEONHWA_ROUTE, YEONHWA_ITEM_IDS } from './yeonhwa.js';
 import { boundsOf, grow, footprint, noteMesh, inspectOf } from '../systems/memory/market.js';
 
@@ -258,7 +261,9 @@ export function buildVillage() {
       // East: Wol's house front, with her door at z -2.4..-3.6.
       { min: [YARD.x1 - 0.05, -2.4], max: [YARD.x1 + 0.12, YARD.z0] },
       { min: [YARD.x1 - 0.05, YARD.z1], max: [YARD.x1 + 0.12, -3.6] },
-      { min: [YARD.x0, YARD.z1 - 0.3], max: [YARD.x1, YARD.z1] },
+      // North: the schoolroom wall, with its door at x -5.6..-4.4.
+      { min: [YARD.x0, YARD.z1 - 0.3], max: [-5.6, YARD.z1] },
+      { min: [-4.4, YARD.z1 - 0.3], max: [YARD.x1, YARD.z1] },
     );
     // Doors that won't open tonight (each milestone opens one).
     const shut = (id, label, center, size, lockedText) => {
@@ -267,7 +272,6 @@ export function buildVillage() {
       d.box([center[0], center[1] + 0.3, center[2]], size.map((s) => (s < 0.2 ? s + 0.02 : s * 0.7)), shade(paper, 0.6));
       parts.push({ id, kind: 'door', label, mesh: d.build(), bounds: grow(boundsOf(center, size), 0.1), transform: () => translation([0, 0, 0]), needs: `open:${id}`, lockedText });
     };
-    shut('school-door', 'the schoolroom door', [-5, 1.1, YARD.z1 + 0.04], [1.2, 2.2, 0.06], 'small shoes are lined up outside. the door is stuck.');
     shut('hill-gate', 'the gate to the hill', [9, 1.1, YARD.z1 + 0.04], [1.4, 2.2, 0.06], 'the path to the shrine on the hill. you know too little to climb it.');
     // The hill above the north wall, dark against the storm.
     mb.quadGrid([YARD.x0 - 6, 3.0, YARD.z1 - 1], [YARD.x1 + 6, 3.0, YARD.z1 - 1], [YARD.x1 + 6, 14, YARD.z1 - 26], [YARD.x0 - 6, 14, YARD.z1 - 26], 8, 4, [0.05, 0.07, 0.06]);
@@ -277,6 +281,8 @@ export function buildVillage() {
 
   buildYeonhwa({ mb, revealed, colliders, parts, items, hides, lights });
   buildWol({ mb, revealed, colliders, parts, items, hides, lights, readables, ghosts });
+  const boards = [];
+  buildSchool({ mb, revealed, colliders, parts, items, hides, lights, readables, boards });
   buildRain(rain, rand);
 
   // ----- things to find -----
@@ -315,7 +321,9 @@ export function buildVillage() {
     revealed: revealed.build(),
     rain: rain.build(),
     water: waterMesh(),
-    parts, items, hides, colliders, lights, readables, ghosts,
+    parts, items, hides, colliders, lights, readables, ghosts, boards,
+    // The corridor that is longer every time you run it.
+    corridor: { area: 'corridor', at: LOOP_AT, back: PERIOD, lines: CORRIDOR_LINES, pass: CORRIDOR_PASS },
     stones: STONES,
     groundAt: (x, z) => groundAt(x, z, STONES),
     start: { pos: [0, 10.6], yaw: 0 },
@@ -328,6 +336,14 @@ export function buildVillage() {
       { id: 'wol', min: [WOL.x0, WOL.z1], max: [WOL.x1, WOL.z0], indoor: true, strong: false,
         route: WOL_ROUTE, enterLine: "wol's house. herbs hang from every beam. the walls are papered with her handwriting.",
         callerLine: 'the herbs sway, though there is no wind in here. she has come to her mother\'s house.' },
+      { id: 'school', min: [CLASS.x0, CLASS.z1], max: [CLASS.x1, CLASS.z0], indoor: true, strong: false,
+        route: SCHOOL_ROUTE, enterLine: "sae's classroom. small desks, small chairs. the chalkboard still has today's date on it.",
+        callerLine: 'a chair scrapes in the classroom. she has come to fetch her daughter from school.' },
+      { id: 'corridor', min: [CORRIDOR.x0, CORRIDOR.z1], max: [CORRIDOR.x1, CORRIDOR.z0], indoor: true, strong: false,
+        route: SCHOOL_ROUTE, fog: { near: 1.5, far: 8.5 }, enterLine: 'a long corridor. the lamps are far apart. a sign says: walk, do not run.' },
+      { id: 'music', min: [MUSIC.x0, MUSIC.z1], max: [MUSIC.x1, MUSIC.z0], indoor: true, strong: false,
+        route: MUSIC_ROUTE, enterLine: 'the music room. an organ, a curtain, and a music box on a stool.',
+        callerLine: 'the organ breathes out one low note. she is in the music room.' },
     ],
     route: [[-9.6, 3.4], [-9.6, -13.6], [-3, -13.6], [-1.6, -8.2], [3.4, -8.2], [9.4, -11], [9.6, 0.8], [4.2, 3.6], [0.0, 1.0], [-4.2, 3.6]],
     sae: { pos: [-1.5, -3.4], yaw: 2.4, scale: 0.6 },
@@ -373,4 +389,4 @@ function waterMesh() {
   return mb.build();
 }
 
-export const VILLAGE_ITEM_IDS = ['memory-boat', 'note-water', ...YEONHWA_ITEM_IDS, ...WOL_ITEM_IDS];
+export const VILLAGE_ITEM_IDS = ['memory-boat', 'note-water', ...YEONHWA_ITEM_IDS, ...WOL_ITEM_IDS, ...SCHOOL_ITEM_IDS];

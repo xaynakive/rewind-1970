@@ -135,6 +135,24 @@ export function createAudio() {
       osc.stop(t + 0.32);
     },
 
+    /** One music-box note: a bright sine with a quick fall. Haewol's lullaby. */
+    chime(hz, delayMs = 0, ms = 600, gain = 0.07) {
+      if (!ctx) return;
+      const t = ctx.currentTime + delayMs / 1000;
+      for (const [mult, g0] of [[1, 1], [2, 0.35], [3.01, 0.12]]) {
+        const osc = ctx.createOscillator();
+        osc.type = 'sine';
+        osc.frequency.value = hz * mult;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.exponentialRampToValueAtTime(gain * g0, t + 0.008);
+        g.gain.exponentialRampToValueAtTime(0.0001, t + Math.max(0.25, ms / 1000) * 1.6);
+        osc.connect(g).connect(master);
+        osc.start(t);
+        osc.stop(t + Math.max(0.25, ms / 1000) * 1.7);
+      }
+    },
+
     /** Mechanical clunk and motor whine when a tape starts. */
     tapeStart() {
       if (!ctx) return;

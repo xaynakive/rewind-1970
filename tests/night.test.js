@@ -401,3 +401,77 @@ test('things float when they land in the flooded courtyard', () => {
   assert.ok(events.some((e) => e.water));
   assert.ok(supportAt(3, -8, p, [], world).floating);
 });
+
+// ----- the schoolroom (Requirement 6.4) -----
+
+import { CLASS, CORRIDOR, PERIOD, LOOP_AT, BOARD_LINES, SCHOOL_ROUTE } from '../src/night/school.js';
+import { tune, tuneLength, PIECES } from '../src/night/lullaby.js';
+import { withLullaby } from '../src/night/save.js';
+
+test("the schoolroom door opens with Wol's spectacles, and the courtyard wall lets you through", () => {
+  const door = village.parts.find((p) => p.id === 'school-door');
+  assert.equal(door.needs, 'memory-spectacles');
+  assert.ok(door.collider && door.openLine);
+  for (const z of [-15.9, -16.15, -16.45]) {
+    const p = [-5, z];
+    assert.ok(!village.colliders.some((b) => overlaps(p, b, 0.25)), `the doorway is open at z ${z}`);
+  }
+});
+
+test("sae's desk holds her drawing, a sixth memory, set on the day", () => {
+  const d = village.items.find((i) => i.id === 'memory-drawing');
+  assert.equal(d.kind, 'memory');
+  assert.equal(d.inside, 'sae-desk');
+  assert.ok(d.flashback.length >= 3);
+  assert.equal(village.items.filter((i) => i.kind === 'memory').length, 6);
+});
+
+test('the chalkboard starts with one line and has more to write', () => {
+  const b = village.boards.find((x) => x.id === 'chalkboard');
+  assert.equal(b.meshes.length, BOARD_LINES.length);
+  assert.ok(BOARD_LINES.length >= 5);
+  assert.equal(b.area, 'school');
+  const a = village.areas.find((x) => x.id === 'school');
+  assert.ok(b.center[0] > a.min[0] && b.center[0] < a.max[0]);
+});
+
+test('the corridor repeats exactly: the loop line and its landing are the same distance from every lamp', () => {
+  const lamps = village.lights.filter((l) => Math.abs(l.pos[0] + 2.2) < 1e-9 && l.pos[2] < CORRIDOR.z0 && l.pos[2] > CORRIDOR.z1).map((l) => l.pos[2]);
+  assert.ok(lamps.length >= 4);
+  for (let i = 1; i < lamps.length; i++) assert.ok(Math.abs(lamps[i - 1] - lamps[i] - PERIOD) < 1e-9);
+  const landing = LOOP_AT + PERIOD;
+  assert.ok(landing < CORRIDOR.z0 - 3, 'you land inside the corridor, past its first lamp');
+  assert.ok(LOOP_AT - 8.5 > CORRIDOR.z1, 'the corridor end is hidden in its fog from the loop line');
+  const c = village.areas.find((x) => x.id === 'corridor');
+  assert.ok(c.fog && c.fog.far <= 9);
+  assert.equal(village.corridor.at, LOOP_AT);
+  // Nothing stands in the corridor itself.
+  for (let z = CORRIDOR.z0 - 0.4; z > CORRIDOR.z1; z -= 0.25) assert.ok(!village.colliders.some((b) => overlaps([-2.2, z], b)), `blocked at ${z}`);
+});
+
+test('the classroom route stays in the classroom; the hiding places can be left', () => {
+  for (const p of SCHOOL_ROUTE) assert.ok(p[0] > CLASS.x0 && p[0] < CLASS.x1 && p[1] < CLASS.z0 && p[1] > CLASS.z1);
+  for (const id of ['school-cupboard', 'curtain']) {
+    const h = village.hides.find((x) => x.id === id);
+    assert.ok(h, id);
+    for (const b of village.colliders) assert.ok(!overlaps(h.exit.pos, b), `${id} exit`);
+    const inBox = village.colliders.some((b) => h.view.pos[0] > b.min[0] && h.view.pos[0] < b.max[0] && h.view.pos[2] > b.min[1] && h.view.pos[2] < b.max[1]);
+    assert.ok(!inBox, `${id} view is inside something`);
+  }
+});
+
+test('the lullaby plays its pieces in order, and the heard count only grows', () => {
+  assert.equal(tune(0).length, 0);
+  assert.equal(tune(1).length, PIECES[0].length);
+  assert.equal(tune(2).length, PIECES[0].length + PIECES[1].length);
+  const t = tune(PIECES.length);
+  for (let i = 1; i < t.length; i++) assert.ok(t[i].at > t[i - 1].at);
+  assert.ok(tuneLength(2) > tuneLength(1));
+  assert.equal(withLullaby(withLullaby(emptySave(), 2), 1).lullaby, 2);
+});
+
+test('the school words keep the tone', () => {
+  const words = [...BOARD_LINES, ...village.areas.flatMap((a) => [a.enterLine ?? '', a.callerLine ?? '']),
+    ...village.corridor.lines, village.corridor.pass].join(' ').toLowerCase();
+  for (const w of ['blood', 'gore', 'kill', 'dead body', 'corpse', 'drown', 'murder']) assert.ok(!words.includes(w), w);
+});

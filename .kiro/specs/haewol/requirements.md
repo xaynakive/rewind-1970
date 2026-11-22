@@ -75,14 +75,18 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 1. **The entry house:** where every loop begins. A dead TV, the table where the camcorder was found. Always safe.
 2. **Yeonhwa's house:** her shrine to Sae, the warm cassette recorder. Rooms open with keys. She is strongest here: inside it she always sees you as if your light were up, and she follows you in. Three memories, and two places to hide.
 3. **Wol's house:** herb-dark, papered with notes that explain the rite and, in the margins, how to undo it. Its door SHALL stay tied shut until the user carries Sae's ribbon. The margins and the page that tells how to undo the rite SHALL be readable only through the lens. Her book SHALL answer each memory the user carries. One memory, and one place to hide.
-4. **The schoolroom:** small desks, a chalkboard that writes back when you're not looking, Sae's things, and a corridor that is longer each time you run it.
+4. **The schoolroom:** north of the courtyard. Its door SHALL open only while the user carries Wol's spectacles (the notice on it is too small to read without them). Small desks, a chalkboard that writes back when you're not looking, Sae's things, and a corridor that is longer each time you run it.
+   - The chalkboard SHALL show one line at 23:58 and add the next line each time the user has looked away from it for 3 s while in the classroom. Lines SHALL persist only for the night.
+   - Running down the corridor SHALL send the user back one identical stretch. Walking (Shift) or standing still SHALL let them through, with a line saying so.
+   - The music room at the end SHALL hold the music box, the first piece of the lullaby.
+   - Sae's desk SHALL hold the sixth memory, her drawing, with a flashback of that afternoon. The cleaning cupboard and the music room curtain SHALL be places to hide.
 5. **The shrine on the hill:** reachable only with enough of the truth. The endings play here.
 6. **The drowned village:** optional and secret, below the still water.
 
 ### Requirement 7: Things to find
 #### Acceptance criteria
 1. **Seven memories.** Keeping one plays a short flashback (lines over a tinted, damaged picture).
-2. **The lullaby**, a few notes at a time (a music box, humming, a scratched record).
+2. **The lullaby**, a few notes at a time (a music box, humming, a scratched record). There SHALL be four pieces. Each source SHALL play every piece found so far, in order, and the number found SHALL be saved.
 3. **Home tapes** to play on found recorders: lore only.
 4. **Offerings** (rice, a comb, a coin, a paper boat), laid at the shrine in the right order.
 5. **Red thread:** Sae ties it to what matters. Through the lens it leads to the next important thing.
@@ -122,7 +126,7 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 3. The picture SHALL look like a film: 2.39:1 black bars (on wide screens, switchable in pause), soft grain, no scanlines, plain white title cards ("Haewol / the first night", then "the second night" and on).
 4. Raising the camcorder SHALL pull the bars away and switch to the tape picture with its PLAY and timecode. Lowering it SHALL return to the film.
 5. All text SHALL stay large and high-contrast. Reduce flashing and reduced motion SHALL stop the grain and the animations.
-6. **Planned:** breathing as an action, and a last ending where Byeol wakes at dawn and changes (tasks 6-7).
+6. **Planned:** breathing as an action, and a last ending where Byeol wakes at dawn and changes (tasks 9-10).
 
 ### Requirement 12: Carry anything
 **User story:** As Byeol, I want to pick up and use the loose things in the dream, like in Minecraft, so the world feels touchable.

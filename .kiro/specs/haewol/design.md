@@ -12,9 +12,11 @@
   | `pieces.js` | shared colours and pieces: paper walls, eaves, lanterns | builds meshes |
   | `village.js` | the entry house and the courtyard, and the level data that joins every place | builds meshes |
   | `yeonhwa.js` | Yeonhwa's house | builds meshes |
+  | `wol.js` | Wol's house | builds meshes |
   | `nightScene.js` | runs one night: input, walking, opening, inspect, the Caller, water, lens, name, drawing | no |
-  | `nightHud.js` | the memory HUD plus the viewfinder, the battery, the name choice and flashbacks | no |
-- Shared, unchanged: `src/render/*`, `src/audio/audio.js`, `src/core/settings.js`, `src/systems/memory/{walker,reach,presence,figures}.js`, `buildItemMesh`, `noteMesh`, `inspectOf` and friends from `market.js`.
+  | `nightHud.js` | the memory HUD plus the island, the notification, the dock, title cards, the viewfinder and flashbacks | no |
+- Shared change: `renderer.present` takes an optional `scan` (scanline strength, default 1). Only Haewol passes it; the house game looks the same.
+- Shared, unchanged: the rest of `src/render/*`, `src/audio/audio.js`, `src/core/settings.js`, `src/systems/memory/{walker,reach,presence,figures}.js`, `buildItemMesh`, `noteMesh`, `inspectOf` and friends from `market.js`.
 - `nightScene.js` started as a copy of `memoryScene.js`. The input code is duplicated on purpose so the house game's verified memories are not touched. Fold it into a shared module once both are stable.
 
 ## Saved state (`save.js`)
@@ -97,3 +99,21 @@ Items with `kind: 'memory'` have `flashback: string[]`. Keeping one plays its li
 
 ## Testing
 `tests/night.test.js`: the clock and water curve, the wake and name times, the lens battery, the saved state normalising, the village layout (start, doors, stones above the highest water, items reachable), each house's doors, items, route and hiding places, Wol's book answering every memory, and tone words.
+
+## The look (Requirement 11)
+Two looks, switched by one flag in `nightScene.js`: `tape = lens.recording || flashback || rewind`.
+
+| | Film (default) | Tape |
+|---|---|---|
+| `present` | tracking 0.02, bleed 0.2, noise 0.045, `scan: 0`, no OSD | tracking 0.16, bleed 0.7, noise 0.055, scanlines, PLAY and timecode OSD |
+| bars | `--bar` = 2.39:1 letterbox, max 13vh, none in portrait or with `no-bars` | `body.nt-rec` sets `--bar: 0`; the dock fades out |
+| grain | a 160 px noise tile made once in `main.js`, shifted in 5 steps (still with reduce flashing or reduced motion) | same |
+
+Inspect is always film. HUD pieces sit in the bars: the island in the top bar, the dock in the bottom bar, subtitles just above it.
+
+- **Island** (`.nt-island`): `hud.setClock(sec)` writes `clockShort` (HH:MM) to it and to the lock screen. `hud.setThreat(0|1|2)` from the scene: 1 when she's within 9 m, 2 when hunting, 0 in story mode. While recording it widens to show the battery.
+- **Notification:** `hud.ask(text, options, { from })`. The first button is the red one.
+- **Dock:** `hud.setInventory([{ name, kind }])`. Icons for `memory`, `photo` and `key` are drawn with CSS. On narrow screens only icons show; names stay in the accessibility tree and the notes.
+- **Title cards:** `hud.titleCard(title, sub)` at every night start: black for 1.6 s, fading to the scene, text fading out at 4.2 s. Words from `nightTitle(loops)`.
+- **Lock screen:** the pause dialog. Grouped rows with switches (CSS on the checkboxes), the brightness slider, and the three actions pinned at the bottom.
+- The bars setting is stored apart from the shared settings, in `localStorage` key `rewind-1970:haewol-view`.

@@ -1,8 +1,12 @@
-// The memory HUD, plus what this game adds: the camcorder's viewfinder and
-// battery, the name choice, and flashbacks. All DOM text.
-// Spec: .kiro/specs/haewol (Requirements 4.1, 8.1, 7.1, 10.4)
+// The memory HUD, plus what this game adds. The system looks like a phone (it is
+// Byeol's, and she fell asleep holding it): the island with the night's clock,
+// notifications for the name, a dock for what you carry, a lock screen for
+// pause. Over it, film title cards. All DOM text.
+// Spec: .kiro/specs/haewol (Requirements 4.1, 7.1, 8.1, 10.4, 11; design "The look")
 
 import { createMemoryHud } from '../ui/memoryHud.js';
+import { clockShort } from './loop.js';
+
 
 /**
  * @param {HTMLElement} root  #memory-hud
@@ -16,12 +20,21 @@ export function createNightHud(root, dialogs, handlers) {
   const battery = $('.nt-battery-level');
   const batteryText = $('.nt-battery-text');
   const choice = $('.nt-choice');
+  const choiceFrom = $('.nt-choice-from');
   const choiceText = $('.nt-choice-text');
   const choiceButtons = $('.nt-choice-buttons');
   const flash = $('.nt-flashback');
   const flashLine = $('.nt-flashback-line');
   const lensBtn = $('[data-mem="lens"]');
   const help = $('.mem-help');
+  const inventory = $('.mem-inventory');
+  const island = $('.nt-island');
+  const islandTime = $('.nt-island-time');
+  const islandBattery = $('.nt-island-battery');
+  const card = $('.nt-card');
+  const cardTitle = $('.nt-card-title');
+  const cardSub = $('.nt-card-sub');
+  const lockTime = dialogs.pause.querySelector('.nt-lock-time');
 
   let lensHeld = false;
   if (lensBtn) {
@@ -30,6 +43,9 @@ export function createNightHud(root, dialogs, handlers) {
   }
 
   let asking = null;
+  let clockText = '';
+  let threat = -1;
+  let cardTimer = 0;
 
   return {
     ...base,
@@ -48,16 +64,71 @@ export function createNightHud(root, dialogs, handlers) {
     setLens(on, level) {
       finder.hidden = !on;
       root.classList.toggle('recording', on);
+      island.classList.toggle('rec', on);
+      document.body.classList.toggle('nt-rec', on);
       const pct = Math.round(level);
       battery.style.width = `${pct}%`;
       battery.classList.toggle('low', pct < 20);
       const t = `battery ${pct}%`;
       if (batteryText.textContent !== t) batteryText.textContent = t;
+      const it = on ? `${pct}%` : '';
+      if (islandBattery.textContent !== it) islandBattery.textContent = it;
     },
     resetLensButton() { lensHeld = false; },
 
-    /** A question with buttons. Resolves with the chosen option's index. */
-    ask(text, options) {
+    /** The night's clock, on the island and the lock screen. */
+    setClock(sec) {
+      const t = clockShort(sec);
+      if (t === clockText) return;
+      clockText = t;
+      islandTime.textContent = t;
+      if (lockTime) lockTime.textContent = t;
+    },
+
+    /** 0 nothing, 1 she is near, 2 she is hunting you: a red dot on the island, like a phone's mic light. */
+    setThreat(level) {
+      if (level === threat) return;
+      threat = level;
+      island.classList.toggle('near', level === 1);
+      island.classList.toggle('hunt', level === 2);
+    },
+
+    /** What you carry, as a dock of icons. Accepts names or { name, kind }. */
+    setInventory(list) {
+      inventory.replaceChildren(...list.map((x) => {
+        const { name, kind } = typeof x === 'string' ? { name: x, kind: '' } : x;
+        const li = document.createElement('li');
+        const icon = document.createElement('span');
+        icon.className = `nt-dock-icon ${kind}`;
+        icon.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.className = 'nt-dock-label';
+        label.textContent = name;
+        li.append(icon, label);
+        return li;
+      }));
+      root.classList.toggle('dock-empty', list.length === 0);
+    },
+
+    /** A film title card: white words on black, fading in and out. */
+    titleCard(title, sub = '', ms = 4200) {
+      cardTitle.textContent = title;
+      cardSub.textContent = sub;
+      card.hidden = false;
+      card.classList.remove('out');
+      // restart the fade
+      void card.offsetWidth;
+      card.classList.add('in');
+      clearTimeout(cardTimer);
+      cardTimer = setTimeout(() => {
+        card.classList.add('out');
+        cardTimer = setTimeout(() => { card.hidden = true; card.classList.remove('in', 'out'); }, 1400);
+      }, ms);
+    },
+
+    /** A notification with buttons. Resolves with the chosen option's index. */
+    ask(text, options, { from = 'haewol' } = {}) {
+      choiceFrom.textContent = from;
       choiceText.textContent = text;
       choiceButtons.replaceChildren();
       choice.hidden = false;

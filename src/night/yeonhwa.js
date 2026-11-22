@@ -21,7 +21,7 @@ const oldPaper = shade(paper, 0.62);
 
 // ---------- inspect objects ----------
 
-function cassetteMesh() {
+export function cassetteMesh() {
   const mb = new MeshBuilder();
   mb.box([0, 0, 0], [0.2, 0.024, 0.128], [0.12, 0.12, 0.13], GLOSS);
   mb.box([0, 0.013, -0.02], [0.16, 0.002, 0.06], [0.86, 0.82, 0.7], GLOSS); // the label

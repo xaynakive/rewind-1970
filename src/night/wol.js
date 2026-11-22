@@ -158,6 +158,12 @@ export function buildWol(v) {
         'memory-drawing': 'beside a child\'s drawing, pressed flat: she asked me to wait with her for the bus. i said it was too wet. i said tomorrow.',
       },
     });
+    // Her brush, at the front of the desk: where you make things, with what you carry.
+    readables.push({
+      id: 'wol-craft', label: 'write or fold at her desk', craft: true,
+      bounds: grow(boundsOf([D[0] + 0.45, F + 0.47, D[1] - 0.18], [0.2, 0.06, 0.24]), 0.04),
+      lines: ["her inkstone, still wet. a note pinned beside it: paper and ink for a talisman, they will not cross it. paper and thread for a boat. (carry them here.)"],
+    });
     // The desk drawer: it slides out toward the room.
     const dr = new MeshBuilder();
     dr.box([D[0] + 0.3, F + 0.25, D[1] - 0.05], [0.5, 0.14, 0.56], shade(wood, 0.6));
@@ -217,6 +223,20 @@ export function buildWol(v) {
       exit: { pos: [18.6, -2.4], yaw: -Math.PI / 2 },
     });
     lights.push({ pos: [20, F + 1.9, -3], color: [0.75, 0.85, 0.6], weight: 0.6, intensity: 0.6 });
+    // A wind-up gramophone in the corner, its record scratched almost white.
+    const G = [21.4, 1.3];
+    mb.box([G[0], F + 0.3, G[1]], [0.5, 0.6, 0.5], darkWood);
+    mb.box([G[0], F + 0.66, G[1]], [0.36, 0.12, 0.36], shade(wood, 1.2));
+    mb.box([G[0], F + 0.725, G[1]], [0.28, 0.01, 0.28], [0.07, 0.07, 0.08], GLOSS);
+    mb.box([G[0], F + 0.731, G[1]], [0.07, 0.004, 0.07], [0.7, 0.62, 0.42]);
+    mb.box([G[0] + 0.12, F + 0.76, G[1] + 0.1], [0.02, 0.06, 0.02], brass);
+    mb.blob([G[0] - 0.05, F + 1.0, G[1] - 0.08], 0.16, 1.2, 8, 3, brass, GLOSS);
+    colliders.push(footprint([G[0], 0, G[1]], [0.5, 0, 0.5], true));
+    readables.push({
+      id: 'gramophone', label: 'play the scratched record', music: 2,
+      bounds: grow(boundsOf([G[0], F + 0.72, G[1]], [0.36, 0.14, 0.36]), 0.08),
+      lines: ['a wind-up gramophone. the record is scratched almost white. you wind it, and under the hiss come a few more notes of the same song.'],
+    });
   }
 
   // ----- the back room: x 12..22, z -5..-10 -----

@@ -42,6 +42,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
   const itemById = new Map(level.items.map((it) => [it.id, { ...it, gl: mk(buildItemMesh(it)), inspectGl: mk(it.inspect.mesh) }]));
   const callerMesh = mk(buildFigure(level.callerLook));
   const saeMesh = mk(buildFigure(level.saeLook));
+  const ghosts = (level.ghosts ?? []).map((g) => ({ ...g, gl: mk(buildFigure(g.look)), seen: false }));
 
   // ----- state -----
   let save = saved;
@@ -189,6 +190,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       if (part.needs && !has(part.needs)) { hud.say(part.lockedText, 4000); audio.knock({ freq: 600, q: 5, gain: 0.07, length: 0.12 }); return; }
       part.target = part.target > 0.5 ? 0 : 1;
       audio.furniture(part.kind);
+      if (part.openLine && part.target === 1 && !part.saidOpen) { part.saidOpen = true; hud.say(part.openLine, 4500); }
       return;
     }
     const item = itemById.get(target);
@@ -196,6 +198,14 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     const hide = level.hides.find((h) => h.id === target);
     if (hide) return goHide(hide);
     const rd = level.readables.find((x) => x.id === target);
+    if (rd && rd.answers) {
+      // She answers in the margins, about what you carry.
+      const said = Object.entries(rd.answers).filter(([id]) => has(id)).map(([, t]) => t);
+      const lines = [rd.intro, ...(said.length ? said : [rd.fallback])];
+      hud.say(lines.join(' '), 5000 + lines.length * 2600);
+      audio.knock({ freq: 2600, q: 1, gain: 0.03, length: 0.2, rate: 0.6 });
+      return;
+    }
     if (rd) {
       // One more line of the tape each loop.
       const n = Math.min(rd.lines.length, loopNo + 1);
@@ -287,6 +297,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
   const containerOf = (it) => it.inside ?? it.needsOpen ?? null;
   const itemAvailable = (it) => {
     if (has(it.id)) return false;
+    if (it.revealed && !lens.recording) return false; // only the lens can see it
     const c = containerOf(it);
     return !c || (partById.get(c)?.open ?? 0) > 0.75;
   };
@@ -571,7 +582,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     }
     let idx = 0;
     for (const it of itemById.values()) {
-      if (has(it.id)) continue;
+      if (has(it.id) || (it.revealed && !lens.recording)) continue;
       it.gl.model = itemOffset(it) ?? undefined;
       const glint = Math.max(0, Math.sin(time * 1.6 + idx * 1.9)) ** 12 * 0.9;
       it.gl.highlight = target === it.id ? 0.6 : Math.max(glintBase, glint);
@@ -584,6 +595,14 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       callerMesh.highlight = Math.random() * 0.15 * flicker;
       callerMesh.hidden = flicker < 0.15 && Math.random() < 0.5;
       list.push(callerMesh);
+    }
+    for (const g of ghosts) {
+      const d = Math.hypot(g.pos[0] - walker.pos[0], g.pos[1] - walker.pos[1]);
+      if (!lens.recording || d > 12) continue;
+      if (!g.seen && d < 7 && mode.kind === 'walk') { g.seen = true; if (g.line) hud.say(g.line, 4500); }
+      g.gl.model = multiply(translation([g.pos[0], g.y ?? 0, g.pos[1]]), multiply(rotationY(-g.yaw), scaling(g.scale ?? 1)));
+      g.gl.highlight = 0.04;
+      list.push(g.gl);
     }
     if (lens.recording && saeSeen === 'showing') {
       saeMesh.model = multiply(translation([sp[0], level.groundAt(sp[0], sp[1]).y, sp[1]]), multiply(rotationY(-level.sae.yaw), scaling(level.sae.scale)));

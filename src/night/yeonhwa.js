@@ -8,27 +8,16 @@ import { MeshBuilder } from '../render/mesh.js';
 import { translation, rotationAbout } from '../render/math.js';
 import { shade, GLOW } from '../systems/house/palette.js';
 import { boundsOf, grow, footprint, noteMesh, inspectOf } from '../systems/memory/market.js';
-import { GLOSS, wood, darkWood, paper, ink, stone, lanternRed, wallZ, wallX } from './pieces.js';
+import { GLOSS, wood, darkWood, paper, ink, stone, lanternRed, wallZ, wallX, colZ, colX } from './pieces.js';
 
 export const FLOOR = 0.3;
 export const YEONHWA = { x0: -24, x1: -12, z0: 2, z1: -14 };
 const H = 2.6;
-const T = 0.12; // wall thickness for colliders
 const brass = [0.7, 0.52, 0.22];
 const thread = [0.9, 0.12, 0.08];
 const plank = shade(wood, 0.85);
 /** Old, smoke-darkened paper on her walls. */
 const oldPaper = shade(paper, 0.62);
-
-/** Colliders for a wall along z at x (from z0 down to z1), leaving door gaps. */
-function colZ(out, x, z0, z1, gaps = []) {
-  const cuts = [z0, ...gaps.flat(), z1].sort((a, b) => b - a);
-  for (let i = 0; i < cuts.length - 1; i += 2) out.push({ min: [x - T, cuts[i + 1]], max: [x + T, cuts[i]] });
-}
-function colX(out, z, x0, x1, gaps = []) {
-  const cuts = [x0, ...gaps.flat(), x1].sort((a, b) => a - b);
-  for (let i = 0; i < cuts.length - 1; i += 2) out.push({ min: [cuts[i], z - T], max: [cuts[i + 1], z + T] });
-}
 
 // ---------- inspect objects ----------
 

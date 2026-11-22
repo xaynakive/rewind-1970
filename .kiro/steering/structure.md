@@ -18,7 +18,7 @@ rewind-1970/
 ├── src/
 │   ├── main.js          # boot and wiring: cold open -> house, moving, tapes, rewind, settings
 │   ├── core/            # settings, hashing / seeded random
-│   ├── night/           # Haewol: boot, the loop clock, the save, the lens, the village, the running night, its HUD
+│   ├── night/           # Haewol: boot, the loop clock, the save, the lens, the village and one module per house, the running night, its HUD
 │   ├── render/          # renderer, shaders, mesh builder, matrix math, bitmap font
 │   ├── systems/
 │   │   ├── cold-open/

@@ -57,6 +57,22 @@ Through the lens: wet handprints all over the shrine.
 
 The three flashbacks are set earlier on the same night: 22:40 (the telegram), the evening (the ribbon), 23:52 (the tape, where she starts the rite). None shows Sae in the water.
 
+## Wol's house (`wol.js`)
+x 12..22, z 2..−10, floor raised to 0.3 m, walls of dark herb-stained paper. Her door at z −3 is tied shut with red thread (`needs: 'memory-ribbon'`): Sae's ribbon is the same thread, and the door's `openLine` plays as the knot comes undone. The area is `indoor` but not `strong`: she walks `WOL_ROUTE` here.
+
+| Room | What you open | What you find |
+|---|---|---|
+| study (x < 18, z > −5) | her desk drawer | **memory: her spectacles** (flashback 23:46: she leaves the book on the table for Yeonhwa). The rite copied in her hand on the desk. Her book of rites (a readable that answers what you carry) |
+| herb room (x > 18, z > −5) | | herbs drying from the beams. The herb table is a low hiding place, looking out through the study door |
+| back room (z < −5) | her chest (lid) | **the family photograph**, her own face scratched out. Above the altar, a page that looks blank: `note-undo`, readable only through the lens |
+
+Through the lens: a pale margin line beside every note pinned in the study, and Wol herself, a ghost bent over her desk.
+
+### New rules used here
+- **Readables with answers:** `{ intro, answers: { [itemId]: line }, fallback }`. Reading shows the intro, then one line for each item you carry that has an answer, or the fallback if none does. Every memory has an answer, so the book is worth visiting again each loop.
+- **Revealed items:** `revealed: true` items are drawn, and can be reached, only while recording.
+- **Ghosts:** `level.ghosts: { id, pos, yaw, scale, y, look, line }`. Drawn only through the lens within 12 m; the line plays the first time you are within 7 m while recording. They never move or catch.
+
 ## The lens (`lens.js`)
 - Battery 100 at the start of a loop; recording drains 2.2 a second (45 s of recording a night). It recovers 0.5 a second when not recording.
 - `revealed` meshes are drawn only while recording, through a green-grey viewfinder grade: footprints, writing and the red thread.
@@ -80,4 +96,4 @@ At the two call times, a line ("sae? sae, come inside.") and a choice: **answer*
 Items with `kind: 'memory'` have `flashback: string[]`. Keeping one plays its lines, 3.4 s each, over the scene with a sepia grade and heavy tracking, then the night continues. The clock does not run during a flashback.
 
 ## Testing
-`tests/night.test.js`: the clock and water curve, the wake and name times, the lens battery, the saved state normalising, the village layout (start, doors, stones above the highest water, items reachable), and tone words.
+`tests/night.test.js`: the clock and water curve, the wake and name times, the lens battery, the saved state normalising, the village layout (start, doors, stones above the highest water, items reachable), each house's doors, items, route and hiding places, Wol's book answering every memory, and tone words.

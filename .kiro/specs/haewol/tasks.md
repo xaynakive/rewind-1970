@@ -12,8 +12,8 @@ Each milestone ends in something playable.
 - [x] 4. The dream, the phone-style system and the film look
   - _Requirements: 10.1, 11.1–11.5_
 - [x] 5. Carry anything: pick up, drop, throw and stack loose things; a 1-9 hotbar in the dock; thrown things make noise
-- [ ] 6. The schoolroom: the chalkboard that writes back, Sae's desk, the corridor that grows
-  - _Requirements: 6.4_
+- [x] 6. The schoolroom: the chalkboard that writes back, Sae's desk, the corridor that grows
+  - _Requirements: 6.4, 7.1, 7.2 (the first piece)_
 - [ ] 7. Crafting at Wol's desk and talismans you place; the lullaby, home tapes, red thread, offerings, and humming to the Caller
   - _Requirements: 5.5, 7.2–7.5_
 - [ ] 8. The open village: lanes, an old bicycle, small errands for the ghosts

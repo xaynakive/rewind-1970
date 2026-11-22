@@ -14,7 +14,8 @@ import { buildFigure } from '../systems/memory/figures.js';
 import { createStrike, flashIntensity, strikeLength, nextStrikeDelay } from '../systems/house/lightning.js';
 import { LOOP_MS, clockAt, isMidnight, waterAt, wakeAt, nameCallsDue, timecode, START_SEC } from './loop.js';
 import { createLens, setRecording, tickLens } from './lens.js';
-import { withTaken, withNameChoice, nameDrawsHer } from './save.js';
+import { withTaken, withNameChoice, nameDrawsHer, withLullaby } from './save.js';
+import { tune, tuneLength } from './lullaby.js';
 import {
   PROP_KINDS, SURFACES, createProps, settle, stepProp, launch, hearingRange, buildPropMesh, blockedAt, supportAt,
   emptyHotbar, addToHotbar, selectSlot, cycleSlot, takeSelected,
@@ -54,6 +55,13 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
   const propById = new Map(props.map((p) => [p.id, p]));
   const propGl = new Map(props.map((p) => [p.id, mk(buildPropMesh(p.kind))]));
   let hotbar = emptyHotbar();
+  // Chalkboards that write while you look away.
+  const boards = (level.boards ?? []).map((b) => ({ ...b, gl: b.meshes.map((m) => mk(m)), shown: 1, awaySince: 0 }));
+  const boardById = new Map(boards.map((b) => [b.id, b]));
+  // The corridor: how many times it has sent you back tonight.
+  let corridorLoops = 0;
+  let corridorPassed = false;
+  let musicUntil = 0;
   let lure = null; // { pos, until }: she is going to look at a noise
   let heardOnce = false;
 
@@ -292,7 +300,23 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     if (prop) return pickUp(prop);
     const hide = level.hides.find((h) => h.id === target);
     if (hide) return goHide(hide);
+    const board = boardById.get(target);
+    if (board) {
+      const lines = board.lines.slice(0, board.shown);
+      hud.say(`${board.intro} ${lines.join(' / ')}`, 4500 + lines.length * 1800);
+      return;
+    }
     const rd = level.readables.find((x) => x.id === target);
+    if (rd && rd.music) {
+      if (performance.now() < musicUntil) return;
+      const n = Math.max(rd.music, save.lullaby);
+      for (const note of tune(n)) audio.chime?.(note.hz, note.at, note.ms);
+      musicUntil = performance.now() + tuneLength(n) + 600;
+      save = withLullaby(save, rd.music);
+      onSave(save);
+      hud.say(rd.lines[0], 6000);
+      return;
+    }
     if (rd && rd.answers) {
       // She answers in the margins, about what you carry.
       const said = Object.entries(rd.answers).filter(([id]) => has(id)).map(([, t]) => t);
@@ -414,6 +438,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     for (const p of partById.values()) out.push({ id: p.id, ...p.bounds });
     for (const h of level.hides) out.push({ id: h.id, ...h.bounds });
     for (const x of level.readables) out.push({ id: x.id, ...x.bounds });
+    for (const b of boards) out.push({ id: b.id, ...b.bounds });
     for (const p of props) {
       if (p.held || !p.resting) continue;
       const [w, h, d] = p.size;
@@ -431,6 +456,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     if (it) return `take ${it.name}`;
     const pr = propById.get(id);
     if (pr) return held() ? `pick up ${PROP_KINDS[pr.kind].name} (Q to stack on it)` : `pick up ${PROP_KINDS[pr.kind].name}`;
+    if (boardById.has(id)) return boardById.get(id).label;
     return level.hides.find((h) => h.id === id)?.label ?? level.readables.find((x) => x.id === id)?.label ?? null;
   }
 
@@ -593,6 +619,38 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       if (!quietUntil) audio.setRain(area?.indoor || inSafe(walker.pos) ? 0.4 : 1);
       if (area && !entered.has(area.id)) { entered.add(area.id); if (area.enterLine) hud.say(area.enterLine, 4500); }
     }
+    // The corridor: running past the line sends you back one stretch of identical corridor.
+    const cor = level.corridor;
+    if (cor && area?.id === cor.area && mode.kind === 'walk' && walker.pos[1] < cor.at && !corridorPassed) {
+      const sneaking = keys.has('ShiftLeft') || keys.has('ShiftRight');
+      if (sneaking || moved === 0) {
+        corridorPassed = true;
+        if (corridorLoops > 0) hud.say(cor.pass, 4500);
+      } else {
+        walker = { ...walker, pos: [walker.pos[0], walker.pos[1] + cor.back] };
+        if (areaAt(caller.pos)?.id === cor.area) caller = { ...caller, pos: [caller.pos[0], caller.pos[1] + cor.back] };
+        hud.say(cor.lines[Math.min(corridorLoops, cor.lines.length - 1)], 4000);
+        corridorLoops++;
+      }
+    }
+    if (cor && area?.id !== cor.area && walker.pos[1] > cor.at + cor.back) corridorPassed = false;
+
+    // Chalkboards write a line while you're in the room and not looking at them.
+    for (const b of boards) {
+      if (area?.id !== b.area || b.shown >= b.lines.length) { b.awaySince = 0; continue; }
+      const fw = forwardOf(walker.yaw, walker.pitch);
+      const to = [b.center[0] - walker.pos[0], b.center[1] - eyeY, b.center[2] - walker.pos[1]];
+      const d = Math.hypot(...to);
+      const looking = (fw[0] * to[0] + fw[1] * to[1] + fw[2] * to[2]) / Math.max(0.01, d) > 0.55;
+      if (looking || mode.kind !== 'walk' && mode.kind !== 'hidden') { b.awaySince = 0; continue; }
+      if (!b.awaySince) b.awaySince = now;
+      if (now - b.awaySince > 3000) {
+        b.shown++;
+        b.awaySince = 0;
+        audio.knock({ freq: 3200, q: 4, gain: 0.025, length: 0.35, rate: 0.5 }); // chalk, behind you
+      }
+    }
+
     const wantRoute = area?.route ?? level.route;
     if (wantRoute !== route && (caller.kind === 'patrol' || caller.kind === 'dormant')) {
       route = wantRoute;
@@ -707,6 +765,9 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       list.push(it.gl);
       idx++;
     }
+    for (const b of boards) {
+      for (let i = 0; i < b.shown; i++) { b.gl[i].highlight = target === b.id ? 0.15 : 0; list.push(b.gl[i]); }
+    }
     for (const p of props) {
       if (p.held) continue;
       const g = propGl.get(p.id);
@@ -781,7 +842,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       lights: lightsNear(eye, now),
       flash, flashDir: level.flashDir, flashColor: [0.85, 0.9, 1],
       sky: level.sky,
-      fogColor: level.fog.color, fogNear: level.fog.near, fogFar: level.fog.far,
+      fogColor: level.fog.color, fogNear: area?.fog?.near ?? level.fog.near, fogFar: area?.fog?.far ?? level.fog.far,
       spot, ripples: rip,
     });
 
@@ -872,7 +933,8 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     setLens(on) { touchLens = on; },
     leave() { finish(onExit); },
     /** For the browser check (?debug). */
-    debug: () => ({ walker, caller, mode: mode.kind, target, nightMs, waterY: waterAt(nightMs), lens, save, candle, hotbar, lure, props }),
+    debug: () => ({ walker, caller, mode: mode.kind, target, nightMs, waterY: waterAt(nightMs), lens, save, candle, hotbar, lure, props,
+      area: area?.id ?? null, corridorLoops, corridorPassed, boards: boards.map((b) => b.shown) }),
     drop: dropHeld,
     throwHeld,
     select: selectHotbar,

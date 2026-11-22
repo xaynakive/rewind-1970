@@ -44,7 +44,7 @@ All 10 hiding spots can be reached. Carry a tape from anywhere in the house to t
 
 **▶ [Play Haewol](https://xaynakive.github.io/rewind-1970/haewol/)**: a second game in this repo, from a new design. Byeol falls asleep at 11:58 pm with her phone still lit in her hand, and the rest is her dream. In it she finds a camcorder and a tape labelled 10·31·1970 in a ruined house. Press play and she is in the village of Haewol on the night of the typhoon, from 23:58 to midnight, and the night keeps repeating. If the Caller catches you, or midnight comes, the tape rewinds and you start again in the entry house. Everything you've found stays with you.
 
-Working now (milestones 1 to 5 of 11):
+Working now (milestones 1 to 6 of 11):
 - **Carry anything,** Minecraft-style: pick up cups, bowls, books, stones, blocks, a bucket, a lantern and more (E), choose one with 1-9 or the wheel, drop it or stack it on something (Q), or throw it (F). Thrown things bounce off walls and float on the flood. She hears where they land and goes to look, so you can lure her away.
 - **The look:** the system looks like a phone (the night's clock in an island at the top, the name call as a notification, a dock of what you carry, pause as a lock screen with switches), and the dream is shot like a film: widescreen black bars, grain, plain white title cards for each night. Raising the camcorder pulls the bars away and turns the picture back into tape. The bars can be turned off in pause.
 - The cold open, the entry house (always safe), and the courtyard with its well, family shrine and red festival lanterns in the typhoon rain.
@@ -55,6 +55,7 @@ Working now (milestones 1 to 5 of 11):
 - The first of seven memories, a paper boat, which plays a flashback of the real night. The TV in the entry house shows one more line of the tape each loop.
 - **Yeonhwa's house**, across the courtyard: her shrine to Sae with the cassette recorder still running, the kitchen, Sae's locked room (the key is hidden in the rice jar) and her bedroom. Three more memories: the tape in the recorder, Sae's red ribbon and a telegram. She is strongest here and follows you in. Hide in the kitchen cupboard or the wardrobe.
 - **Wol's house**, east of the courtyard, tied shut with red thread until you carry Sae's ribbon. Her study is papered with notes; through the lens you can read what she wrote in the margins, and see her still bent over her desk. Her book of rites answers whatever memory you bring it. Find her spectacles (a fifth memory), the rite in her hand, a page that is blank except through the lens, and the family photograph with her own face scratched out. Hide under the herb table.
+- **The schoolroom**, north of the courtyard. Its door has a notice too small to read until you carry Wol's spectacles. Inside is Sae's class. The chalkboard writes another line every time you look away. The corridor to the music room gets longer each time you run it, so walk. In the music room a tin music box plays the first notes of a lullaby. Sae's desk holds her drawing, the sixth memory. Hide in the cleaning cupboard or behind the curtain.
 
 Plan: `.kiro/specs/haewol/tasks.md`.
 

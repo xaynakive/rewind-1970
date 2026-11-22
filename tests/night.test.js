@@ -301,3 +301,103 @@ test('each night gets a title card, and the island shows hours and minutes', asy
   assert.equal(clockShort(clockAt(0)), '23:58');
   assert.equal(clockShort(clockAt(LOOP_MS)), '00:00');
 });
+
+// ----- carrying (Requirement 12) -----
+
+import {
+  HOTBAR_SIZE, PROP_KINDS, SURFACES, createProps, settle, stepProp, launch, supportAt, blockedAt, hearingRange,
+  emptyHotbar, addToHotbar, selectSlot, cycleSlot, takeSelected,
+} from '../src/night/props.js';
+
+const propWorld = () => ({ groundAt: village.groundAt, colliders: village.colliders, surfaces: SURFACES, waterY: WATER_LOW });
+const runUntilRest = (p, props, world, max = 600) => {
+  const events = [];
+  const first = stepProp(p, 1 / 60, props, world);
+  if (first) events.push(first);
+  for (let i = 0; i < max && !p.resting; i++) { const ev = stepProp(p, 1 / 60, props, world); if (ev) events.push(ev); }
+  return events;
+};
+
+test('the hotbar fills the selected slot first, then the first free one, and says when it is full', () => {
+  let h = emptyHotbar();
+  h = selectSlot(h, 4);
+  h = addToHotbar(h, 'a');
+  assert.equal(h.slots[4], 'a');
+  h = addToHotbar(h, 'b');
+  assert.equal(h.slots[0], 'b');
+  assert.equal(h.selected, 0);
+  for (let i = 0; i < HOTBAR_SIZE - 2; i++) h = addToHotbar(h, `x${i}`);
+  assert.equal(addToHotbar(h, 'one too many'), null);
+  const { hotbar, id } = takeSelected(selectSlot(h, 0));
+  assert.equal(id, 'b');
+  assert.equal(hotbar.slots[0], null);
+  assert.equal(takeSelected(selectSlot(emptyHotbar(), 3)).id, null);
+  assert.equal(cycleSlot(selectSlot(h, 8), 1).selected, 0);
+  assert.equal(cycleSlot(selectSlot(h, 0), -1).selected, 8);
+});
+
+test('property: the hotbar never holds a thing twice or loses one', () => {
+  forAll('hotbar', { ops: gen.array(gen.int(0, 11), 0, 40) }, ({ ops }) => {
+    let h = emptyHotbar();
+    const held = new Set();
+    let n = 0;
+    for (const op of ops) {
+      if (op < 9) h = selectSlot(h, op);
+      else if (op === 9) { const next = addToHotbar(h, `p${n}`); if (next) { h = next; held.add(`p${n}`); } n++; }
+      else { const t = takeSelected(h); h = t.hotbar; if (t.id) held.delete(t.id); }
+      const ids = h.slots.filter(Boolean);
+      assert.equal(new Set(ids).size, ids.length);
+      assert.deepEqual(new Set(ids), held);
+    }
+  });
+});
+
+test('every loose thing rests on the floor or a table, never inside a wall', () => {
+  const world = propWorld();
+  const props = settle(createProps(), world);
+  for (const p of props) {
+    assert.ok(PROP_KINDS[p.kind], p.kind);
+    assert.ok(!blockedAt(p.pos[0], p.pos[2], p.pos[1], world), `${p.kind} at ${p.pos} is inside something`);
+    assert.ok(p.pos[1] >= village.groundAt(p.pos[0], p.pos[2]).y - 1e-9);
+  }
+  const onTable = props.filter((p) => SURFACES.some((s) => Math.abs(p.pos[1] - s.y) < 1e-9));
+  assert.ok(onTable.length >= 5, 'some things start on tables');
+});
+
+test('a dropped thing lands, and stacks on what is under it', () => {
+  const world = propWorld();
+  const [a, b] = createProps([{ kind: 'block', at: [0, 9] }, { kind: 'block', at: [0, 9] }]);
+  const props = [a, b];
+  a.pos = [0, 1, 9]; b.pos = [0, 1.6, 9];
+  runUntilRest(a, props, world);
+  assert.ok(Math.abs(a.pos[1] - village.groundAt(0, 9).y) < 1e-9, 'on the floor');
+  runUntilRest(b, props, world);
+  assert.ok(Math.abs(b.pos[1] - (a.pos[1] + a.size[1])) < 1e-9, 'on top of the first');
+  // Take the bottom one away and the top one falls.
+  a.held = true;
+  runUntilRest(b, props, world);
+  assert.ok(Math.abs(b.pos[1] - village.groundAt(0, 9).y) < 1e-9);
+});
+
+test('a thrown thing is stopped by walls, lands, and makes a noise she can hear', () => {
+  const world = propWorld();
+  const [p] = createProps([{ kind: 'stone', at: [0, 9] }]);
+  // From the middle of the entry house, straight at its back wall.
+  launch(p, [0, 1.5, 9], [0, 0, 1]);
+  const events = runUntilRest(p, [p], world);
+  assert.ok(p.resting);
+  assert.ok(p.pos[2] < 12, `it stayed inside (z ${p.pos[2].toFixed(2)})`);
+  assert.ok(events.length >= 1);
+  assert.ok(hearingRange(events[0]) > 3);
+});
+
+test('things float when they land in the flooded courtyard', () => {
+  const world = { ...propWorld(), waterY: 0.1 };
+  const [p] = createProps([{ kind: 'cup', at: [3, -8] }]);
+  p.pos = [3, 1, -8];
+  const events = runUntilRest(p, [p], world);
+  assert.ok(village.groundAt(3, -8).sunken, 'the spot is in the sunken courtyard');
+  assert.ok(p.floating && Math.abs(p.pos[1] - 0.1) < 1e-9);
+  assert.ok(events.some((e) => e.water));
+  assert.ok(supportAt(3, -8, p, [], world).floating);
+});

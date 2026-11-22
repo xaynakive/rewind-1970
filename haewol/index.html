@@ -37,7 +37,11 @@
       <p class="mem-prompt" aria-live="polite"></p>
       <p class="mem-line" role="status" aria-live="polite"></p>
       <p class="mem-help"></p>
-      <ul class="mem-inventory" aria-label="what you carry"></ul>
+      <div class="nt-dock">
+        <p class="nt-hotbar-name" aria-live="polite"></p>
+        <ol class="nt-hotbar" aria-label="in your hands (1 to 9)"></ol>
+        <ul class="mem-inventory" aria-label="what you've kept"></ul>
+      </div>
       <div class="mem-caption" hidden>
         <h2 class="mem-caption-name"></h2>
         <p class="mem-caption-text"></p>
@@ -72,6 +76,8 @@
         <button type="button" data-mem="light" class="mem-btn mem-btn-light">candle</button>
         <button type="button" data-mem="lens" class="mem-btn mem-btn-lens">lens</button>
         <button type="button" data-mem="use" class="mem-btn mem-btn-use">use</button>
+        <button type="button" data-mem="drop" class="mem-btn mem-btn-drop" hidden>drop</button>
+        <button type="button" data-mem="throw" class="mem-btn mem-btn-throw" hidden>throw</button>
       </div>
       <div class="mem-vignette" aria-hidden="true"></div>
     </div>

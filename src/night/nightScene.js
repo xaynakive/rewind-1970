@@ -15,6 +15,10 @@ import { createStrike, flashIntensity, strikeLength, nextStrikeDelay } from '../
 import { LOOP_MS, clockAt, isMidnight, waterAt, wakeAt, nameCallsDue, timecode, START_SEC } from './loop.js';
 import { createLens, setRecording, tickLens } from './lens.js';
 import { withTaken, withNameChoice, nameDrawsHer } from './save.js';
+import {
+  PROP_KINDS, SURFACES, createProps, settle, stepProp, launch, hearingRange, buildPropMesh, blockedAt, supportAt,
+  emptyHotbar, addToHotbar, selectSlot, cycleSlot, takeSelected,
+} from './props.js';
 
 const MOUSE_SENS = 0.0024;
 const TOUCH_LOOK = 0.006;
@@ -24,6 +28,7 @@ const REWIND_MS = 2400;
 const FLASH_LINE_MS = 3600;
 const WATER_SPEED = 0.62; // of walking speed, off the stones
 const NEAR_WARN = 8;
+const LURE_MS = 9000;
 
 /**
  * @param {{ r: object, audio: object, hud: object, stage: HTMLElement, level: object,
@@ -43,6 +48,14 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
   const callerMesh = mk(buildFigure(level.callerLook));
   const saeMesh = mk(buildFigure(level.saeLook));
   const ghosts = (level.ghosts ?? []).map((g) => ({ ...g, gl: mk(buildFigure(g.look)), seen: false }));
+  // Loose things: they reset every night.
+  const propWorld = { groundAt: level.groundAt, colliders: level.colliders, surfaces: level.surfaces ?? SURFACES, waterY: waterAt(0) };
+  const props = settle(createProps(level.props), propWorld);
+  const propById = new Map(props.map((p) => [p.id, p]));
+  const propGl = new Map(props.map((p) => [p.id, mk(buildPropMesh(p.kind))]));
+  let hotbar = emptyHotbar();
+  let lure = null; // { pos, until }: she is going to look at a noise
+  let heardOnce = false;
 
   // ----- state -----
   let save = saved;
@@ -79,7 +92,8 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
   const paused = () => hud.dialogOpen || hud.asking || document.querySelector('dialog[open]:not(#memory-pause):not(#memory-notes)') !== null;
 
   const HANDLED = ['KeyW', 'KeyA', 'KeyS', 'KeyD', 'ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'ShiftLeft', 'ShiftRight',
-    'KeyE', 'Enter', 'Space', 'KeyL', 'KeyC', 'Tab', 'Escape', 'Equal', 'Minus', 'NumpadAdd', 'NumpadSubtract'];
+    'KeyE', 'Enter', 'Space', 'KeyL', 'KeyC', 'Tab', 'Escape', 'Equal', 'Minus', 'NumpadAdd', 'NumpadSubtract',
+    'KeyQ', 'KeyF', 'KeyG', 'Digit1', 'Digit2', 'Digit3', 'Digit4', 'Digit5', 'Digit6', 'Digit7', 'Digit8', 'Digit9'];
   function onKeyDown(e) {
     if (paused()) return;
     const k = e.code;
@@ -90,6 +104,9 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     if (e.repeat) return;
     if (k === 'KeyE' || k === 'Enter' || k === 'Space') use();
     else if (k === 'KeyL') toggleCandle();
+    else if (k === 'KeyQ') dropHeld();
+    else if (k === 'KeyF' || k === 'KeyG') throwHeld();
+    else if (k.startsWith('Digit')) selectHotbar(Number(k.slice(5)) - 1);
     else if (k === 'Tab') { releaseLock(); hud.openNotes(); }
     else if (k === 'Escape') {
       if (mode.kind === 'inspect') closeInspect();
@@ -155,6 +172,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
   }
   const onContextMenu = (e) => e.preventDefault();
   function onWheel(e) {
+    if (mode.kind === 'walk' && !paused()) { e.preventDefault(); hotbar = cycleSlot(hotbar, e.deltaY); refreshHotbar(); return; }
     if (mode.kind !== 'inspect') return;
     e.preventDefault();
     mode.zoom = clampZoom(mode.zoom * (e.deltaY < 0 ? 1.1 : 0.9));
@@ -181,6 +199,81 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     audio.knock({ freq: 1400, q: 3, gain: 0.04, length: 0.05 });
   }
 
+  // ----- carrying -----
+  const held = () => (hotbar.slots[hotbar.selected] ? propById.get(hotbar.slots[hotbar.selected]) : null);
+  const propSound = (kind, loud = 1) => {
+    const snd = PROP_KINDS[kind].sound;
+    const g = Math.min(0.16, 0.03 + loud * 0.02);
+    if (snd === 'ceramic') audio.knock({ freq: 2300 + Math.random() * 600, q: 8, gain: g, length: 0.12 });
+    else if (snd === 'stone') audio.knock({ freq: 380, q: 3, gain: g * 1.2, length: 0.1 });
+    else if (snd === 'cloth') audio.knock({ freq: 220, q: 0.6, gain: g * 0.5, length: 0.14, rate: 0.6 });
+    else audio.knock({ freq: 620, q: 2.5, gain: g, length: 0.09 });
+  };
+  function refreshHotbar() {
+    hud.setHotbar?.(hotbar.slots.map((id) => (id ? { name: PROP_KINDS[propById.get(id).kind].name, kind: propById.get(id).kind } : null)), hotbar.selected);
+  }
+  function selectHotbar(i) {
+    if (mode.kind !== 'walk') return;
+    hotbar = selectSlot(hotbar, i);
+    refreshHotbar();
+  }
+  function pickUp(prop) {
+    const next = addToHotbar(hotbar, prop.id);
+    if (!next) { hud.say('your hands are full. drop something first (Q).', 3000); return; }
+    hotbar = next;
+    prop.held = true;
+    prop.resting = false;
+    propSound(prop.kind, 0.5);
+    refreshHotbar();
+  }
+  /** Where a dropped thing goes: on top of what you're looking at, or just in front of you. */
+  function dropPoint() {
+    const aimed = target && propById.get(target);
+    if (aimed) return [aimed.pos[0], aimed.pos[2]];
+    const fw = forwardOf(walker.yaw);
+    for (const d of [0.8, 0.5, 0.25]) {
+      const x = walker.pos[0] + fw[0] * d, z = walker.pos[1] + fw[2] * d;
+      if (!blockedAt(x, z, 99, propWorld) || propWorld.surfaces.some((s) => x > s.min[0] && x < s.max[0] && z > s.min[1] && z < s.max[1])) return [x, z];
+    }
+    return [walker.pos[0], walker.pos[1]];
+  }
+  function dropHeld() {
+    if (mode.kind !== 'walk') return;
+    const p = held();
+    if (!p) return;
+    hotbar = takeSelected(hotbar).hotbar;
+    const [x, z] = dropPoint();
+    p.held = false;
+    p.resting = false;
+    p.vel = [0, 0, 0];
+    p.yaw = walker.yaw;
+    p.pos = [x, supportAt(x, z, p, props, propWorld, 99).y + 0.12, z];
+    refreshHotbar();
+  }
+  function throwHeld() {
+    if (mode.kind !== 'walk') return;
+    const p = held();
+    if (!p) return;
+    hotbar = takeSelected(hotbar).hotbar;
+    const dir = forwardOf(walker.yaw, walker.pitch);
+    const from = [walker.pos[0] + dir[0] * 0.3, eyeY - 0.1, walker.pos[1] + dir[2] * 0.3];
+    launch(p, from, dir);
+    audio.knock({ freq: 900, q: 0.5, gain: 0.03, length: 0.18, rate: 0.4 }); // the whoosh
+    refreshHotbar();
+  }
+  /** A thing landed. If she is near enough to hear it, she goes to look. */
+  function heard(ev, kind, now) {
+    if (ev.water) audio.plop(); else propSound(kind, ev.loud);
+    if (ev.water) ripples.push({ x: ev.pos[0], z: ev.pos[2], t: now });
+    if (caller.kind !== 'patrol' && caller.kind !== 'search') return;
+    if (settings().storyMode) return;
+    const d = Math.hypot(caller.pos[0] - ev.pos[0], caller.pos[1] - ev.pos[2]);
+    if (d > hearingRange(ev)) return;
+    lure = { pos: [ev.pos[0], ev.pos[2]], until: now + LURE_MS };
+    caller = { ...caller, kind: 'search', since: now, lastSeen: [ev.pos[0], ev.pos[2]], lastSeenAt: now };
+    if (!heardOnce) { heardOnce = true; hud.say(level.lines.heard ?? 'somewhere behind the rain, she turns toward the sound.', 3500); }
+  }
+
   function use() {
     if (mode.kind === 'inspect') return closeInspect();
     if (mode.kind === 'hidden') return comeOut();
@@ -195,6 +288,8 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     }
     const item = itemById.get(target);
     if (item) return openInspect(item);
+    const prop = propById.get(target);
+    if (prop) return pickUp(prop);
     const hide = level.hides.find((h) => h.id === target);
     if (hide) return goHide(hide);
     const rd = level.readables.find((x) => x.id === target);
@@ -256,6 +351,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     hud.setNotes(kept.filter((i) => i.kind !== 'key').map((i) => ({ name: i.name, text: i.kind === 'memory' ? `${i.text} ${i.flashback.join(' ')}` : i.text })));
   }
   refreshInventory();
+  refreshHotbar();
 
   // ----- the name -----
   function callName(i) {
@@ -318,6 +414,12 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     for (const p of partById.values()) out.push({ id: p.id, ...p.bounds });
     for (const h of level.hides) out.push({ id: h.id, ...h.bounds });
     for (const x of level.readables) out.push({ id: x.id, ...x.bounds });
+    for (const p of props) {
+      if (p.held || !p.resting) continue;
+      const [w, h, d] = p.size;
+      const pad = 0.07;
+      out.push({ id: p.id, min: [p.pos[0] - w / 2 - pad, p.pos[1] - pad, p.pos[2] - d / 2 - pad], max: [p.pos[0] + w / 2 + pad, p.pos[1] + h + pad, p.pos[2] + d / 2 + pad] });
+    }
     return out;
   }
   const itemTargets = () => [...itemById.values()].filter(itemAvailable).map((it) => ({ id: it.id, ...itemBounds(it) }));
@@ -327,6 +429,8 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     if (p) return `${p.target > 0.5 ? 'close' : 'open'} ${p.label}`;
     const it = itemById.get(id);
     if (it) return `take ${it.name}`;
+    const pr = propById.get(id);
+    if (pr) return held() ? `pick up ${PROP_KINDS[pr.kind].name} (Q to stack on it)` : `pick up ${PROP_KINDS[pr.kind].name}`;
     return level.hides.find((h) => h.id === id)?.label ?? level.readables.find((x) => x.id === id)?.label ?? null;
   }
 
@@ -466,6 +570,20 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       }
     }
     colliders = activeColliders();
+    // Loose things fall, bounce, float and land.
+    if (!frozen) {
+      propWorld.waterY = waterY;
+      propWorld.colliders = colliders;
+      for (const p of props) {
+        const ev = stepProp(p, sec, props, propWorld);
+        if (ev) heard(ev, p.kind, now);
+      }
+    }
+    if (lure) {
+      if (now > lure.until || caller.kind === 'hunt' || caller.kind === 'gone' || caller.kind === 'stare') lure = null;
+      else if (caller.kind === 'search') caller = { ...caller, since: now - 1000 }; // keep looking until she gets there
+      if (lure && Math.hypot(caller.pos[0] - lure.pos[0], caller.pos[1] - lure.pos[1]) < 0.8) lure = null;
+    }
     if (mode.kind === 'walk') walker = { ...walker, pos: step(walker, { forward: 0, strafe: 0 }, 0, colliders).pos };
 
     // Changing area: the rain, her route, a line the first time.
@@ -588,6 +706,25 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       it.gl.highlight = target === it.id ? 0.6 : Math.max(glintBase, glint);
       list.push(it.gl);
       idx++;
+    }
+    for (const p of props) {
+      if (p.held) continue;
+      const g = propGl.get(p.id);
+      g.model = multiply(translation(p.pos), rotationY(p.yaw));
+      g.highlight = target === p.id ? 0.45 : glintBase * 0.4;
+      list.push(g);
+    }
+    const inHand = mode.kind === 'walk' ? held() : null;
+    if (inHand) {
+      // In your right hand, low in the frame.
+      const fw = forwardOf(walker.yaw, walker.pitch);
+      const rt0 = rightOf(walker.yaw);
+      const hp = [eye[0] + fw[0] * 0.55 + rt0[0] * 0.26, eye[1] + fw[1] * 0.55 - 0.17, eye[2] + fw[2] * 0.55 + rt0[2] * 0.26];
+      const g = propGl.get(inHand.id);
+      const big = Math.max(...inHand.size);
+      g.model = multiply(translation(hp), multiply(rotationY(-walker.yaw + 0.5), scaling(big > 0.18 ? 0.18 / big : 0.8)));
+      g.highlight = 0;
+      list.push(g);
     }
     if (callerShown) {
       callerMesh.model = multiply(translation([caller.pos[0], level.groundAt(caller.pos[0], caller.pos[1]).y, caller.pos[1]]), rotationY(-caller.facing));
@@ -735,7 +872,10 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     setLens(on) { touchLens = on; },
     leave() { finish(onExit); },
     /** For the browser check (?debug). */
-    debug: () => ({ walker, caller, mode: mode.kind, target, nightMs, waterY: waterAt(nightMs), lens, save, candle }),
+    debug: () => ({ walker, caller, mode: mode.kind, target, nightMs, waterY: waterAt(nightMs), lens, save, candle, hotbar, lure, props }),
+    drop: dropHeld,
+    throwHeld,
+    select: selectHotbar,
     teleport(pos, yaw = walker.yaw, pitch = 0) { walker = { pos: [...pos], yaw, pitch }; },
     skipTo(ms) { nightMs = ms; },
   };

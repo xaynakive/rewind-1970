@@ -136,15 +136,53 @@ body.haewol .mem-caption { bottom: calc(var(--bar) + 3%); }
 body.haewol .mem-caption-name { font-family: var(--sys); font-weight: 600; letter-spacing: 0.02em; font-size: clamp(22px, 2.6vw, 32px); }
 body.haewol .mem-caption-help { color: var(--ink-2); opacity: 1; }
 
-/* ----- the dock: what you carry ----- */
-body.haewol .mem-inventory {
-  top: auto; right: auto; left: 50%; bottom: max(10px, calc(var(--bar) / 2 - 27px)); transform: translateX(-50%);
-  max-width: 94%; flex-wrap: nowrap; justify-content: safe center; gap: 8px; padding: 7px;
+/* ----- the dock: the hotbar, then what you've kept ----- */
+.nt-dock {
+  position: absolute; z-index: 2; left: 50%; bottom: max(10px, calc(var(--bar) / 2 - 27px)); transform: translateX(-50%);
+  display: flex; align-items: center; gap: 8px; max-width: 96%; padding: 7px;
   background: var(--glass); border: 1px solid var(--glass-line); border-radius: 24px;
   backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  transition: opacity 0.4s ease;
+}
+.memory-hud.dock-empty .nt-dock, .memory-hud.inspecting .nt-dock, .memory-hud.flashback .nt-dock { display: none; }
+body.haewol .mem-inventory {
+  position: static; transform: none; max-width: none; min-width: 0;
+  flex-wrap: nowrap; justify-content: flex-start; gap: 8px; padding: 0;
   overflow-x: auto; scrollbar-width: none;
 }
-body.haewol .memory-hud.dock-empty .mem-inventory { display: none; }
+.nt-hotbar { display: none; margin: 0; padding: 0; list-style: none; gap: 5px; flex: none; }
+.memory-hud.has-hotbar .nt-hotbar { display: flex; }
+.memory-hud.has-hotbar .mem-inventory:not(:empty) { padding-left: 10px; border-left: 1px solid var(--glass-line); }
+.nt-slot {
+  position: relative; width: 40px; height: 40px; border-radius: 11px; pointer-events: auto; cursor: pointer;
+  background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+.nt-slot.sel { box-shadow: inset 0 0 0 2.5px #fff, 0 0 12px rgba(255, 255, 255, 0.25); }
+.nt-slot-n { position: absolute; left: 5px; top: 2px; font-size: 11px; font-weight: 700; color: rgba(255, 255, 255, 0.75); text-shadow: 0 1px 2px #000; z-index: 1; }
+/* Each kind of loose thing: a small drawn swatch of what it looks like. */
+.nt-slot::after { content: ""; position: absolute; left: 50%; top: 56%; transform: translate(-50%, -50%); }
+.nt-slot.cup::after { width: 15px; height: 17px; border-radius: 3px 3px 6px 6px; background: #ddd7c7; box-shadow: inset 0 3px 0 #6b5a40; }
+.nt-slot.bowl::after { width: 24px; height: 12px; border-radius: 2px 2px 12px 12px; background: #c8bea4; }
+.nt-slot.book::after { width: 18px; height: 23px; border-radius: 2px; background: #6b2a20; box-shadow: inset -4px 0 0 #ddd2b4; }
+.nt-slot.stone::after { width: 22px; height: 15px; border-radius: 50%; background: #7a7a76; }
+.nt-slot.bucket::after { width: 20px; height: 20px; border-radius: 2px 2px 5px 5px; background: #70502e; box-shadow: inset 0 4px 0 #3a3430, inset 0 -4px 0 #3a3430; }
+.nt-slot.lantern::after { width: 18px; height: 22px; border-radius: 6px; background: #b01c12; box-shadow: inset 0 3px 0 #1e1a18, inset 0 -3px 0 #1e1a18; }
+.nt-slot.herbs::after { width: 12px; height: 24px; border-radius: 6px; background: #4e5a2c; box-shadow: 0 9px 0 -5px #b83420; }
+.nt-slot.cushion::after { width: 24px; height: 18px; border-radius: 5px; background: #5c2220; }
+.nt-slot.block::after { width: 16px; height: 16px; border-radius: 2px; background: #b58650; }
+.nt-hotbar-name {
+  position: absolute; left: 50%; bottom: calc(100% + 10px); transform: translateX(-50%); margin: 0;
+  white-space: nowrap; padding: 6px 14px; border-radius: 14px; font-size: 17px; font-weight: 600; color: var(--ink);
+  background: var(--glass); border: 1px solid var(--glass-line); opacity: 0; transition: opacity 0.35s ease; pointer-events: none;
+}
+.nt-hotbar-name.visible { opacity: 1; }
+.nt-hotbar-name:empty { display: none; }
+/* With things in your hands, what you've kept shows as icons; the names are in the notes. */
+@media (max-width: 1180px) { .memory-hud.has-hotbar .nt-dock-label { display: none; } .memory-hud.has-hotbar .mem-inventory li { padding: 0; } }
+@media (max-width: 640px) { .nt-slot.empty:not(.sel) { display: none; } }
+body.haewol .mem-btn-drop { right: 20px; bottom: calc(28% + 100px); }
+body.haewol .mem-btn-throw { right: 120px; bottom: calc(28% + 60px); }
+.mem-btn[hidden] { display: none; }
 body.haewol .mem-inventory li {
   display: flex; align-items: center; gap: 8px; flex: none;
   font-family: var(--sys); font-size: clamp(14px, 1.3vw, 16px); font-weight: 500;
@@ -153,7 +191,7 @@ body.haewol .mem-inventory li {
 }
 .nt-dock-label { max-width: 15em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Through the camcorder the dock steps aside: the tape owns the frame. */
-body.nt-rec .mem-inventory { opacity: 0; transition: opacity 0.4s ease; }
+body.nt-rec .nt-dock { opacity: 0; }
 body.nt-rec .mem-line { bottom: 19%; }
 body.nt-rec .mem-help { display: none; }
 .nt-dock-icon {
@@ -164,7 +202,6 @@ body.nt-rec .mem-help { display: none; }
 .nt-dock-icon.memory { background: linear-gradient(160deg, #ff5a4e, #a3170f); }
 .nt-dock-icon.photo { background: linear-gradient(160deg, #e4d9bf, #8a7c5e); color: #2a241a; }
 .nt-dock-icon.key { background: linear-gradient(160deg, #d9b15a, #7d5a18); }
-@media (pointer: coarse) { body.haewol .mem-inventory { top: auto; } }
 /* Small screens: icons only (the names are still read out, and in the notes). */
 @media (max-width: 640px) {
   .nt-dock-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }

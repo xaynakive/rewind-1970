@@ -35,6 +35,17 @@ export function createNightHud(root, dialogs, handlers) {
   const cardTitle = $('.nt-card-title');
   const cardSub = $('.nt-card-sub');
   const lockTime = dialogs.pause.querySelector('.nt-lock-time');
+  const hotbarEl = $('.nt-hotbar');
+  const hotbarName = $('.nt-hotbar-name');
+  const dropBtn = $('[data-mem="drop"]');
+  const throwBtn = $('[data-mem="throw"]');
+  const tapBtn = (b, fn) => b?.addEventListener('click', (e) => { e.stopPropagation(); fn(); });
+  tapBtn(dropBtn, () => handlers.onDrop?.());
+  tapBtn(throwBtn, () => handlers.onThrow?.());
+  let nameTimer = 0;
+  let lastHeld = null;
+  let keptCount = 0, heldCount = 0;
+  const syncDock = () => root.classList.toggle('dock-empty', keptCount === 0 && heldCount === 0);
 
   let lensHeld = false;
   if (lensBtn) {
@@ -57,7 +68,7 @@ export function createNightHud(root, dialogs, handlers) {
       base.show();
       help.textContent = base.isTouch
         ? 'drag on the left to walk, on the right to look. tap use when something is named. lens raises the camcorder.'
-        : 'click to look around. W A S D or arrows to walk, E to use, hold C or the right mouse button for the camcorder, L for the candle, shift to sneak, tab for notes, esc to pause.';
+        : 'click to look around. W A S D to walk, E to use or pick up, 1-9 or the wheel to choose, Q to drop, F to throw. hold C or the right mouse button for the camcorder, L for the candle, shift to sneak, tab for notes, esc to pause.';
     },
 
     /** The viewfinder: REC, the battery, a frame. `level` 0..100. */
@@ -107,8 +118,43 @@ export function createNightHud(root, dialogs, handlers) {
         li.append(icon, label);
         return li;
       }));
-      root.classList.toggle('dock-empty', list.length === 0);
+      keptCount = list.length;
+      syncDock();
     },
+
+    /** The hotbar: nine slots of loose things, `selected` is the one in your hand. */
+    setHotbar(slots, selected) {
+      heldCount = slots.filter(Boolean).length;
+      root.classList.toggle('has-hotbar', heldCount > 0);
+      hotbarEl.replaceChildren(...slots.map((s, i) => {
+        const li = document.createElement('li');
+        li.className = `nt-slot${s ? ` ${s.kind}` : ' empty'}${i === selected ? ' sel' : ''}`;
+        const n = document.createElement('span');
+        n.className = 'nt-slot-n';
+        n.textContent = String(i + 1);
+        n.setAttribute('aria-hidden', 'true');
+        const label = document.createElement('span');
+        label.className = 'sr-only';
+        label.textContent = s ? `${i + 1}: ${s.name}${i === selected ? ', in your hand' : ''}` : `${i + 1}: empty`;
+        li.append(n, label);
+        li.addEventListener('click', (e) => { e.stopPropagation(); handlers.onSlot?.(i); });
+        return li;
+      }));
+      const inHand = slots[selected];
+      if (dropBtn) { dropBtn.hidden = !inHand; throwBtn.hidden = !inHand; }
+      const nm = inHand ? inHand.name : '';
+      if (nm !== lastHeld) {
+        lastHeld = nm;
+        hotbarName.textContent = nm;
+        hotbarName.classList.toggle('visible', nm !== '');
+        clearTimeout(nameTimer);
+        nameTimer = setTimeout(() => hotbarName.classList.remove('visible'), 1800);
+      }
+      syncDock();
+    },
+
+    showCaption(...a) { root.classList.add('inspecting'); base.showCaption(...a); },
+    hideCaption() { root.classList.remove('inspecting'); base.hideCaption(); },
 
     /** A film title card: white words on black, fading in and out. */
     titleCard(title, sub = '', ms = 4200) {

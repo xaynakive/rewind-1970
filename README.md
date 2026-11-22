@@ -44,7 +44,8 @@ All 10 hiding spots can be reached. Carry a tape from anywhere in the house to t
 
 **▶ [Play Haewol](https://xaynakive.github.io/rewind-1970/haewol/)**: a second game in this repo, from a new design. Byeol falls asleep at 11:58 pm with her phone still lit in her hand, and the rest is her dream. In it she finds a camcorder and a tape labelled 10·31·1970 in a ruined house. Press play and she is in the village of Haewol on the night of the typhoon, from 23:58 to midnight, and the night keeps repeating. If the Caller catches you, or midnight comes, the tape rewinds and you start again in the entry house. Everything you've found stays with you.
 
-Working now (milestones 1 to 4 of 11):
+Working now (milestones 1 to 5 of 11):
+- **Carry anything,** Minecraft-style: pick up cups, bowls, books, stones, blocks, a bucket, a lantern and more (E), choose one with 1-9 or the wheel, drop it or stack it on something (Q), or throw it (F). Thrown things bounce off walls and float on the flood. She hears where they land and goes to look, so you can lure her away.
 - **The look:** the system looks like a phone (the night's clock in an island at the top, the name call as a notification, a dock of what you carry, pause as a lock screen with switches), and the dream is shot like a film: widescreen black bars, grain, plain white title cards for each night. Raising the camcorder pulls the bars away and turns the picture back into tape. The bars can be turned off in pause.
 - The cold open, the entry house (always safe), and the courtyard with its well, family shrine and red festival lanterns in the typhoon rain.
 - The water rises with the clock. Late in the night you cross on stepping stones; walking in the water is slow and loud.

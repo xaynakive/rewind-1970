@@ -1,37 +1,203 @@
-/* Rewind 1970: Haewol. On top of ../style.css. Spec: .kiro/specs/haewol */
+/* Haewol. On top of ../style.css. Spec: .kiro/specs/haewol (design "The look")
+ *
+ * Two looks. The system (menus, HUD, choices) looks like a phone: frosted glass,
+ * rounded corners, the system font, switches. The picture is shot like a film:
+ * widescreen bars, grain, plain white title cards. The camcorder is the one
+ * thing that still looks like tape.
+ */
+
+body.haewol {
+  --sys: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", "Segoe UI", Roboto, Inter, system-ui, sans-serif;
+  --ink: #ffffff;
+  --ink-2: rgba(235, 235, 245, 0.72);
+  --glass: rgba(24, 24, 28, 0.72);
+  --glass-line: rgba(255, 255, 255, 0.14);
+  --fill: rgba(118, 118, 128, 0.26);
+  --switch-on: #32d74b;
+  --red: #ff453a;
+  /* 2.39:1 widescreen, capped, and none on tall screens. */
+  --bar: min(13vh, max(0px, calc((100dvh - 100vw / 2.39) / 2)));
+  font-family: var(--sys);
+  background: #000;
+}
+@media (orientation: portrait) { body.haewol { --bar: 0px; } }
+body.haewol.no-bars { --bar: 0px; }
+/* Through the camcorder the bars pull away: the tape fills the frame. */
+body.haewol.nt-rec { --bar: 0px; }
+
+/* ----- the film: bars and grain ----- */
+.nt-bars { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.nt-bar { position: absolute; left: 0; right: 0; height: var(--bar); background: #000; transition: height 0.7s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.nt-bar.top { top: 0; }
+.nt-bar.bottom { bottom: 0; }
+.nt-grain {
+  position: absolute; inset: -40px; z-index: 2; pointer-events: none;
+  opacity: 0.09; mix-blend-mode: screen; background-size: 160px 160px;
+  animation: nt-grain 0.5s steps(5) infinite;
+}
+@keyframes nt-grain {
+  0% { transform: translate(0, 0); } 20% { transform: translate(-23px, 11px); } 40% { transform: translate(17px, -19px); }
+  60% { transform: translate(-9px, 27px); } 80% { transform: translate(29px, 5px); } 100% { transform: translate(0, 0); }
+}
+@media (prefers-reduced-motion: reduce) { .nt-grain { animation: none; } .nt-bar { transition: none; } }
+body.reduce-flashing .nt-grain { animation: none; }
+
+/* ----- title cards ----- */
+.nt-card {
+  position: absolute; inset: 0; z-index: 5; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0.9rem;
+  background: #000; color: var(--ink); text-align: center;
+}
+.nt-card[hidden] { display: none; }
+.nt-card.in { animation: nt-card-bg 4.2s ease forwards; }
+.nt-card.in p { animation: nt-card-text 1.6s ease both; }
+.nt-card.out p { opacity: 0; transition: opacity 1.3s ease; }
+@keyframes nt-card-bg { 0%, 38% { background: #000; } 75%, 100% { background: rgba(0, 0, 0, 0); } }
+@keyframes nt-card-text { from { opacity: 0; letter-spacing: 0.5em; } to { opacity: 1; } }
+.nt-card-title { margin: 0; font-weight: 500; font-size: clamp(22px, 3.2vw, 40px); letter-spacing: 0.42em; text-transform: uppercase; text-indent: 0.42em; text-shadow: 0 0 18px #000; }
+.nt-card-sub { margin: 0; font-size: clamp(16px, 1.8vw, 22px); color: var(--ink-2); letter-spacing: 0.08em; text-shadow: 0 0 12px #000; }
+.nt-card-sub:empty { display: none; }
+@media (prefers-reduced-motion: reduce) {
+  .nt-card.in, .nt-card.in p { animation: none; }
+  .nt-card.in { background: rgba(0, 0, 0, 0.55); }
+}
 
 /* ----- the cold open ----- */
 .nt-intro {
   position: absolute; inset: 0; z-index: 4;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 1.4rem; padding: 6vh 6vw; text-align: center;
-  background: radial-gradient(ellipse at center, rgba(7, 6, 10, 0.55), rgba(7, 6, 10, 0.92));
+  gap: 0.9rem; padding: 5vh 7vw; text-align: center; background: #000;
+  justify-content: safe center; overflow-y: auto;
 }
+.nt-intro > * { flex-shrink: 0; }
 .nt-intro[hidden] { display: none; }
+.nt-kicker { margin: 0; font-size: clamp(14px, 1.4vw, 18px); letter-spacing: 0.5em; text-indent: 0.5em; text-transform: uppercase; color: var(--ink-2); }
 .nt-title {
-  margin: 0; font-family: var(--mono); font-weight: normal;
-  font-size: clamp(42px, 9vw, 110px); line-height: 0.95; letter-spacing: 0.2em;
-  color: #f1e9d2; text-shadow: 2px 0 rgba(200, 40, 30, 0.6), -2px 0 rgba(60, 160, 200, 0.45);
+  margin: 0 0 0.6rem; font-family: var(--sys); font-weight: 300;
+  font-size: clamp(40px, min(7vw, 11vh), 110px); line-height: 1; letter-spacing: 0.32em; text-indent: 0.32em;
+  text-transform: uppercase; color: var(--ink);
 }
-.nt-intro-lines { max-width: 760px; min-height: 9em; }
+.nt-intro-lines { max-width: 800px; min-height: 9em; }
 .nt-intro-lines p {
-  margin: 0 0 0.7rem; font-size: clamp(18px, 2.3vw, 28px); line-height: 1.45;
-  color: #f4ecd6; text-shadow: 0 0 8px #000;
-  animation: nt-in 1.2s ease both;
+  margin: 0 0 0.6rem; font-size: clamp(18px, min(2.1vw, 3.4vh), 26px); line-height: 1.45;
+  color: var(--ink); animation: nt-in 1.8s ease both;
 }
-@keyframes nt-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes nt-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .nt-intro-lines p { animation: none; } }
-.nt-intro-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+.nt-intro-actions { display: flex; gap: 0.8rem; flex-wrap: wrap; justify-content: center; }
 .nt-play, .nt-skip {
-  font-family: var(--mono); font-size: clamp(18px, 2.2vw, 26px); letter-spacing: 0.12em;
-  min-height: 56px; padding: 0 1.6rem; color: #f4ecd6; background: rgba(13, 12, 16, 0.8);
-  border: 1px solid #c8281e; cursor: pointer;
+  font-family: var(--sys); font-size: clamp(18px, 2vw, 22px); font-weight: 600;
+  min-height: 54px; padding: 0 1.8rem; border-radius: 27px; border: 0; cursor: pointer;
 }
-.nt-skip { border-color: #6a6252; font-size: clamp(15px, 1.7vw, 20px); }
-.nt-play:focus-visible, .nt-skip:focus-visible { outline: 2px solid #f4ecd6; outline-offset: 3px; }
-.nt-intro-note { margin: 0; max-width: 640px; font-size: clamp(14px, 1.5vw, 18px); opacity: 0.75; }
+.nt-play { color: #000; background: #fff; }
+.nt-skip { color: var(--ink); background: var(--fill); font-weight: 500; }
+.nt-play:focus-visible, .nt-skip:focus-visible { outline: 3px solid #0a84ff; outline-offset: 3px; }
+.nt-intro-note { margin: 0.4rem 0 0; max-width: 640px; font-size: clamp(14px, 1.4vw, 17px); color: var(--ink-2); }
 
-/* ----- the viewfinder ----- */
+/* ----- the island: the night's clock, and her red dot ----- */
+.nt-island {
+  position: absolute; left: 50%; top: max(10px, calc(var(--bar) / 2 - 19px));
+  transform: translateX(-50%); z-index: 3;
+  display: flex; align-items: center; gap: 10px; height: 38px; min-width: 128px; padding: 0 18px;
+  background: #000; border-radius: 19px; box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.08);
+  color: var(--ink); font-size: 17px; font-weight: 600; font-variant-numeric: tabular-nums;
+  transition: min-width 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+.nt-island-time { flex: 1; text-align: center; }
+.nt-island-dot { width: 8px; height: 8px; border-radius: 50%; background: transparent; transition: background 0.4s ease; }
+.nt-island.near .nt-island-dot { background: #ff9f0a; }
+.nt-island.hunt .nt-island-dot { background: var(--red); box-shadow: 0 0 10px var(--red); }
+.nt-island-rec { display: none; align-items: center; gap: 6px; font-size: 15px; color: var(--red); }
+.nt-island.rec { min-width: 190px; }
+.nt-island.rec .nt-island-rec { display: flex; }
+.nt-island-tally { width: 9px; height: 9px; border-radius: 50%; background: var(--red); animation: nt-blink 1s steps(2) infinite; }
+@media (prefers-reduced-motion: reduce) { .nt-island-tally { animation: none; } }
+
+/* ----- what's said: film subtitles ----- */
+body.haewol .mem-line {
+  top: auto; bottom: calc(max(var(--bar), 76px) + 4%);
+  font-style: normal; font-weight: 500; letter-spacing: 0.01em; line-height: 1.4;
+  font-size: clamp(19px, 2.3vw, 30px); width: min(88%, 980px);
+  color: var(--ink); text-shadow: 0 0 4px #000, 0 0 12px #000, 0 1px 2px #000;
+}
+body.haewol .mem-help { bottom: auto; top: calc(var(--bar) + 5%); font-size: clamp(15px, 1.5vw, 19px); width: min(88%, 900px); }
+body.haewol .mem-prompt {
+  top: calc(50% + 22px); width: auto; max-width: 80%; padding: 8px 18px; border-radius: 20px;
+  font-size: clamp(17px, 2vw, 24px); font-weight: 600; letter-spacing: 0;
+  background: var(--glass); border: 1px solid var(--glass-line); text-shadow: none;
+  backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+body.haewol .mem-prompt:empty { display: none; }
+body.haewol .mem-crosshair { width: 6px; height: 6px; margin: -3px 0 0 -3px; background: rgba(255, 255, 255, 0.7); box-shadow: 0 0 0 1.5px rgba(0, 0, 0, 0.5); }
+body.haewol .mem-crosshair.active { background: #fff; transform: scale(2); }
+
+/* ----- inspecting something ----- */
+body.haewol .mem-caption { bottom: calc(var(--bar) + 3%); }
+body.haewol .mem-caption-name { font-family: var(--sys); font-weight: 600; letter-spacing: 0.02em; font-size: clamp(22px, 2.6vw, 32px); }
+body.haewol .mem-caption-help { color: var(--ink-2); opacity: 1; }
+
+/* ----- the dock: what you carry ----- */
+body.haewol .mem-inventory {
+  top: auto; right: auto; left: 50%; bottom: max(10px, calc(var(--bar) / 2 - 27px)); transform: translateX(-50%);
+  max-width: 94%; flex-wrap: nowrap; justify-content: safe center; gap: 8px; padding: 7px;
+  background: var(--glass); border: 1px solid var(--glass-line); border-radius: 24px;
+  backdrop-filter: blur(22px) saturate(1.5); -webkit-backdrop-filter: blur(22px) saturate(1.5);
+  overflow-x: auto; scrollbar-width: none;
+}
+body.haewol .memory-hud.dock-empty .mem-inventory { display: none; }
+body.haewol .mem-inventory li {
+  display: flex; align-items: center; gap: 8px; flex: none;
+  font-family: var(--sys); font-size: clamp(14px, 1.3vw, 16px); font-weight: 500;
+  color: var(--ink); background: transparent; border: 0; padding: 0 12px 0 0; border-radius: 17px;
+  letter-spacing: 0;
+}
+.nt-dock-label { max-width: 15em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Through the camcorder the dock steps aside: the tape owns the frame. */
+body.nt-rec .mem-inventory { opacity: 0; transition: opacity 0.4s ease; }
+body.nt-rec .mem-line { bottom: 19%; }
+body.nt-rec .mem-help { display: none; }
+.nt-dock-icon {
+  position: relative; display: block; flex: none; width: 38px; height: 38px; border-radius: 10px;
+  font-size: 0; color: #fff; background: linear-gradient(160deg, #5a5a62, #2c2c32);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+.nt-dock-icon.memory { background: linear-gradient(160deg, #ff5a4e, #a3170f); }
+.nt-dock-icon.photo { background: linear-gradient(160deg, #e4d9bf, #8a7c5e); color: #2a241a; }
+.nt-dock-icon.key { background: linear-gradient(160deg, #d9b15a, #7d5a18); }
+@media (pointer: coarse) { body.haewol .mem-inventory { top: auto; } }
+/* Small screens: icons only (the names are still read out, and in the notes). */
+@media (max-width: 640px) {
+  .nt-dock-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+  body.haewol .mem-inventory li { padding: 0; }
+}
+
+/* ----- the name: a notification ----- */
+.nt-choice {
+  position: absolute; left: 50%; top: calc(max(10px, calc(var(--bar) / 2 - 19px)) + 50px);
+  transform: translateX(-50%); z-index: 4; width: min(94%, 560px); pointer-events: auto;
+  padding: 14px 16px 16px; border-radius: 22px; text-align: left;
+  background: rgba(36, 36, 40, 0.78); border: 1px solid var(--glass-line);
+  backdrop-filter: blur(28px) saturate(1.6); -webkit-backdrop-filter: blur(28px) saturate(1.6);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+  animation: nt-drop 0.55s cubic-bezier(0.2, 0.9, 0.25, 1.15) both;
+}
+@keyframes nt-drop { from { transform: translate(-50%, -120px); opacity: 0; } to { transform: translateX(-50%); opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .nt-choice { animation: none; } }
+.nt-choice[hidden] { display: none; }
+.nt-choice-head { display: flex; align-items: center; gap: 9px; margin-bottom: 8px; color: var(--ink-2); font-size: 15px; }
+.nt-app-icon { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 7px; background: linear-gradient(160deg, #ff5a4e, #8f140d); color: #fff; font-size: 16px; }
+.nt-choice-from { flex: 1; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; font-size: 14px; }
+.nt-choice-text { margin: 0 0 14px; font-size: clamp(19px, 2.2vw, 25px); font-weight: 600; color: var(--ink); line-height: 1.35; }
+.nt-choice-buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.nt-choice-buttons button {
+  font-family: var(--sys); font-size: clamp(17px, 1.9vw, 20px); font-weight: 600; min-height: 50px;
+  color: var(--ink); background: var(--fill); border: 0; border-radius: 14px; cursor: pointer;
+}
+.nt-choice-buttons button:first-child { color: #fff; background: rgba(255, 69, 58, 0.85); }
+.nt-choice-buttons button:focus-visible { outline: 3px solid #0a84ff; outline-offset: 2px; }
+.memory-hud.choosing .mem-crosshair, .memory-hud.choosing .mem-prompt, .memory-hud.choosing .mem-help { display: none; }
+
+/* ----- the camcorder: still tape ----- */
 .nt-finder { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
 .nt-finder[hidden] { display: none; }
 /* Through the lens the world goes green-grey, like an old camcorder's monitor. */
@@ -41,12 +207,12 @@
   -webkit-backdrop-filter: grayscale(0.7) sepia(0.25) hue-rotate(55deg) contrast(1.15) brightness(1.15);
 }
 .nt-corner { position: absolute; width: 46px; height: 46px; border: 0 solid rgba(244, 236, 214, 0.85); }
-.nt-corner.tl { left: 7%; top: 12%; border-left-width: 3px; border-top-width: 3px; }
-.nt-corner.tr { right: 7%; top: 12%; border-right-width: 3px; border-top-width: 3px; }
-.nt-corner.bl { left: 7%; bottom: 14%; border-left-width: 3px; border-bottom-width: 3px; }
-.nt-corner.br { right: 7%; bottom: 14%; border-right-width: 3px; border-bottom-width: 3px; }
+.nt-corner.tl { left: 7%; top: 14%; border-left-width: 3px; border-top-width: 3px; }
+.nt-corner.tr { right: 7%; top: 14%; border-right-width: 3px; border-top-width: 3px; }
+.nt-corner.bl { left: 7%; bottom: 16%; border-left-width: 3px; border-bottom-width: 3px; }
+.nt-corner.br { right: 7%; bottom: 16%; border-right-width: 3px; border-bottom-width: 3px; }
 .nt-rec {
-  position: absolute; right: calc(7% + 60px); top: calc(12% + 6px); margin: 0;
+  position: absolute; right: calc(7% + 60px); top: calc(14% + 6px); margin: 0;
   font-family: var(--mono); font-size: clamp(18px, 2.2vw, 28px); letter-spacing: 0.1em; color: #f4ecd6;
   text-shadow: 0 0 6px #000; display: flex; align-items: center; gap: 0.5rem;
 }
@@ -54,28 +220,12 @@
 @keyframes nt-blink { 50% { opacity: 0.25; } }
 @media (prefers-reduced-motion: reduce) { .nt-tally { animation: none; } }
 .nt-battery {
-  position: absolute; left: calc(7% + 60px); top: calc(12% + 10px);
+  position: absolute; left: calc(7% + 60px); top: calc(14% + 10px);
   width: 90px; height: 22px; border: 2px solid #f4ecd6; padding: 2px; box-shadow: 0 0 6px #000;
 }
 .nt-battery::after { content: ""; position: absolute; right: -8px; top: 5px; width: 5px; height: 9px; background: #f4ecd6; }
 .nt-battery-level { height: 100%; background: #f4ecd6; transition: width 0.2s linear; }
 .nt-battery-level.low { background: #e0261a; }
-
-/* ----- the name ----- */
-.nt-choice {
-  position: absolute; left: 50%; top: 58%; transform: translateX(-50%); z-index: 3;
-  width: min(92%, 720px); text-align: center; pointer-events: auto;
-  background: rgba(7, 6, 10, 0.82); border: 1px solid #5a5446; padding: 1.2rem 1.4rem 1.4rem;
-}
-.nt-choice[hidden] { display: none; }
-.nt-choice-text { margin: 0 0 1rem; font-size: clamp(19px, 2.4vw, 30px); font-style: italic; color: #f4ecd6; line-height: 1.4; }
-.nt-choice-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
-.nt-choice-buttons button {
-  font-family: var(--mono); font-size: clamp(17px, 2vw, 24px); min-height: 52px; min-width: 170px;
-  color: #f4ecd6; background: #0d0c10; border: 1px solid #8a8070; cursor: pointer;
-}
-.nt-choice-buttons button:focus-visible { outline: 2px solid #f4ecd6; outline-offset: 3px; }
-.memory-hud.choosing .mem-crosshair, .memory-hud.choosing .mem-prompt, .memory-hud.choosing .mem-help { display: none; }
 
 /* ----- flashbacks ----- */
 .memory-hud.flashback::before {
@@ -85,12 +235,102 @@
 }
 .nt-flashback { position: absolute; inset: 0; z-index: 2; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .nt-flashback[hidden] { display: none; }
-.nt-flashback-tag { margin: 0 0 1rem; font-family: var(--mono); letter-spacing: 0.4em; font-size: clamp(18px, 2vw, 24px); color: #ff4a3a; text-shadow: 0 0 6px #000; }
-.nt-flashback-line { margin: 0; width: min(88%, 820px); text-align: center; font-size: clamp(20px, 2.7vw, 34px); line-height: 1.45; font-style: italic; color: #f4ecd6; text-shadow: 0 0 8px #000, 0 0 18px #000; }
+.nt-flashback-tag { margin: 0 0 1rem; font-size: clamp(16px, 1.7vw, 20px); font-weight: 600; letter-spacing: 0.5em; text-indent: 0.5em; text-transform: uppercase; color: #ff6a5e; text-shadow: 0 0 6px #000; }
+.nt-flashback-line { margin: 0; width: min(88%, 860px); text-align: center; font-size: clamp(20px, 2.6vw, 33px); line-height: 1.5; font-weight: 500; color: #fff; text-shadow: 0 0 8px #000, 0 0 18px #000; }
 .memory-hud.flashback .mem-crosshair, .memory-hud.flashback .mem-prompt, .memory-hud.flashback .mem-line, .memory-hud.flashback .mem-help { display: none; }
 
-/* ----- touch and pause ----- */
-.mem-btn-lens { right: 120px; bottom: calc(18% + 80px); border-color: #c8281e; }
-.nt-slider { display: flex; align-items: center; gap: 0.8rem; margin: 0.5rem 0; min-height: 32px; }
-.nt-slider input { flex: 1; }
-.nt-progress { opacity: 0.8; margin: 0.6rem 0 0; }
+/* ----- touch: round glass buttons ----- */
+body.haewol .mem-btn {
+  font-family: var(--sys); font-size: 16px; font-weight: 600; letter-spacing: 0; color: var(--ink);
+  background: var(--glass); border: 1px solid var(--glass-line);
+  backdrop-filter: blur(18px) saturate(1.4); -webkit-backdrop-filter: blur(18px) saturate(1.4);
+}
+body.haewol .mem-btn-use { border-color: rgba(255, 255, 255, 0.5); }
+body.haewol .mem-btn-pause, body.haewol .mem-btn-notes { top: max(10px, calc(var(--bar) / 2 - 28px)); min-width: 56px; min-height: 56px; }
+body.haewol .mem-btn-pause { font-size: 20px; padding: 0; }
+.mem-btn-lens { right: 120px; bottom: calc(18% + 80px); }
+body.haewol .mem-btn-lens { border-color: rgba(255, 69, 58, 0.8); }
+
+/* ----- pause: the lock screen ----- */
+body.haewol .panel {
+  font-family: var(--sys); color: var(--ink);
+  width: min(94vw, 560px); padding: 1.4rem 1.2rem 1.2rem; border-radius: 28px;
+  background: rgba(28, 28, 32, 0.72); border: 1px solid var(--glass-line);
+  backdrop-filter: blur(30px) saturate(1.6); -webkit-backdrop-filter: blur(30px) saturate(1.6);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+}
+body.haewol .panel::backdrop { background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+body.haewol .panel h2 { font-size: 15px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ink-2); margin: 0 0 0.3rem 0.4rem; }
+body.haewol .case-intro { color: var(--ink-2); opacity: 1; font-style: normal; margin: 0 0 0.9rem 0.4rem; font-size: 16px; }
+.nt-lock-head { text-align: center; margin: 0.2rem 0 1.2rem; }
+.nt-lock-date { margin: 0; font-size: 18px; font-weight: 600; color: var(--ink-2); text-transform: capitalize; }
+.nt-lock-time { margin: 0; font-size: clamp(64px, 14vw, 96px); font-weight: 200; line-height: 1.05; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; }
+
+.nt-group { background: var(--fill); border-radius: 14px; margin: 0 0 0.9rem; overflow: hidden; }
+body.haewol .nt-group .toggle, body.haewol .nt-group .nt-slider {
+  display: flex; align-items: center; flex-wrap: wrap; gap: 0 0.6rem; margin: 0;
+  min-height: 52px; padding: 6px 14px; font-size: 18px; font-weight: 500;
+}
+body.haewol .nt-group > * + * { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1); }
+body.haewol .nt-group .toggle-note { order: 2; flex-basis: 100%; font-size: 14px; color: var(--ink-2); opacity: 1; margin-top: -4px; }
+/* An iOS switch. */
+body.haewol .toggle input[type="checkbox"] {
+  order: 1; margin-left: auto; appearance: none; -webkit-appearance: none; flex: none;
+  position: relative; width: 51px; height: 31px; border-radius: 16px; background: rgba(120, 120, 128, 0.36);
+  cursor: pointer; transition: background 0.25s ease;
+}
+body.haewol .toggle input[type="checkbox"]::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 27px; height: 27px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3); transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+body.haewol .toggle input[type="checkbox"]:checked { background: var(--switch-on); }
+body.haewol .toggle input[type="checkbox"]:checked::before { transform: translateX(20px); }
+body.haewol .toggle input[type="checkbox"]:focus-visible { outline: 3px solid #0a84ff; outline-offset: 2px; }
+/* The words come first, the switch last, the note under both. */
+body.haewol .nt-group .toggle { justify-content: space-between; }
+.nt-slider input { flex: 1; min-width: 140px; accent-color: #fff; }
+.nt-progress { color: var(--ink-2); margin: 0 0 0.6rem 0.4rem; font-size: 16px; }
+
+body.haewol .actions { display: grid; grid-template-columns: 1fr; gap: 8px; margin-top: 0.4rem; }
+body.haewol .panel button {
+  font-family: var(--sys); font-size: 18px; font-weight: 600; letter-spacing: 0;
+  min-height: 52px; border-radius: 14px; border: 0; color: var(--ink); background: var(--fill);
+}
+body.haewol .panel button.nt-primary { color: #000; background: #fff; order: -1; }
+body.haewol .panel button[data-action="leave"] { color: var(--red); }
+body.haewol .panel button:focus-visible { outline: 3px solid #0a84ff; outline-offset: 2px; }
+body.haewol .mem-notes-list h3 { font-family: var(--sys); font-weight: 600; font-size: 18px; letter-spacing: 0; opacity: 1; }
+body.haewol .mem-notes-list .reader-text { font-family: var(--sys); font-size: 17px; line-height: 1.5; color: var(--ink-2); }
+body.haewol .reader-empty { color: var(--ink-2); }
+
+/* Dock icons, drawn with CSS so they never depend on a font. */
+.nt-dock-icon::before, .nt-dock-icon::after { content: ""; position: absolute; }
+/* anything: a dot */
+.nt-dock-icon::before { left: 15px; top: 15px; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+/* a memory: a four-pointed spark */
+.nt-dock-icon.memory::before { left: 12px; top: 12px; width: 14px; height: 14px; border-radius: 2px; transform: rotate(45deg) scale(0.8); background: #fff; }
+.nt-dock-icon.memory::after { left: 17px; top: 9px; width: 4px; height: 20px; border-radius: 2px; background: #fff; }
+/* a photograph: a framed picture */
+.nt-dock-icon.photo::before { left: 9px; top: 10px; width: 16px; height: 14px; border-radius: 2px; background: transparent; border: 2px solid #2a241a; }
+.nt-dock-icon.photo::after { left: 14px; top: 16px; width: 10px; height: 6px; background: #2a241a; clip-path: polygon(0 100%, 40% 0, 70% 60%, 100% 20%, 100% 100%); }
+/* a key: a ring and a shaft */
+.nt-dock-icon.key::before { left: 7px; top: 13px; width: 8px; height: 8px; border-radius: 50%; background: transparent; border: 2.5px solid #fff; }
+.nt-dock-icon.key::after { left: 18px; top: 17px; width: 13px; height: 3px; background: #fff; box-shadow: 8px 3px 0 -0.5px #fff, 4px 3px 0 -0.5px #fff; }
+/* the notification's app: a little house */
+.nt-app-icon { position: relative; font-size: 0; }
+.nt-app-icon::before { content: ""; position: absolute; left: 6px; top: 5px; width: 14px; height: 8px; background: #fff; clip-path: polygon(50% 0, 100% 100%, 0 100%); }
+.nt-app-icon::after { content: ""; position: absolute; left: 8px; top: 13px; width: 10px; height: 7px; background: #fff; }
+
+/* The lock screen fits a short window: a smaller clock, and the buttons always in view. */
+@media (max-height: 820px) {
+  .nt-lock-time { font-size: clamp(52px, 11vh, 84px); }
+  .nt-lock-head { margin-bottom: 0.6rem; }
+  body.haewol .nt-group .toggle, body.haewol .nt-group .nt-slider { min-height: 46px; padding: 4px 14px; }
+}
+body.haewol #memory-pause { max-height: 94dvh; padding-bottom: 0; }
+body.haewol #memory-pause .actions {
+  position: sticky; bottom: 0; margin: 0 -1.2rem; padding: 0.7rem 1.2rem 1.1rem;
+  background: linear-gradient(to bottom, rgba(28, 28, 32, 0), rgba(28, 28, 32, 0.96) 30%);
+  grid-template-columns: 1fr 1fr 1fr;
+}
+@media (max-width: 520px) { body.haewol #memory-pause .actions { grid-template-columns: 1fr; } }

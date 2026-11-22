@@ -1,13 +1,14 @@
 # Requirements: Haewol, the looping night
 
 ## Introduction
-A second, standalone game in this repo, from the user's design document "REWIND 1970: a tape dated October 31st, 1970". You are an urban explorer who finds a camcorder and a tape in a ruined house. Playing the tape puts you in the village of Haewol on the night of the typhoon, 23:58 to 00:00, a night that keeps replaying. You explore the houses, collect seven memories, and choose how the night ends.
+A second, standalone game in this repo, from the user's design document "REWIND 1970: a tape dated October 31st, 1970". The whole game is a dream. Byeol, a girl who can't put her phone down, falls asleep at 11:58 pm with it still lit in her hand. In the dream she finds a camcorder and a tape in a ruined house. Playing the tape puts you in the village of Haewol on the night of the typhoon, 23:58 to 00:00, a night that keeps replaying. You explore the houses, collect seven memories, and choose how the night ends. Every ending but one keeps you in the dream. In the last one you stop chasing, breathe, and wake up changed: the realization is that what you chase inside the loop doesn't matter.
 
 It lives at `haewol/index.html` and reuses the house game's renderer, audio, walking, reaching, inspect view and presence. The house game is unchanged.
 
-Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asian horror. The village, its rite and its names are invented.
+Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asian horror; "Minecraft meets Asian horror meets a little GTA and old Nintendo games", with a system that looks like iOS and a picture that feels like an A24 film. The village, its rite and its names are invented.
 
 ## Glossary
+- **Byeol:** the dreamer, and the user. In the dream the house calls her "Sae".
 - **The night:** one loop, 23:58:00 to 00:00:00 on the timecode, lasting `LOOP_MS` of real time.
 - **Rewind:** the night starting again in the entry house. Caused by the Caller catching you, or by midnight.
 - **The Caller:** Yeonhwa, the mother. The presence of this game.
@@ -103,8 +104,22 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 
 ### Requirement 10: The look, the sound, and access
 #### Acceptance criteria
-1. Everything is seen through the tape: the house game's VHS picture, a burned-in timecode, rolling tracking near danger.
+1. The dream is shot like a film (Requirement 11). The camcorder, flashbacks and rewinds are seen through the tape: the house game's VHS picture, a burned-in timecode, rolling tracking near danger.
 2. Rain as the constant floor, cicadas that go quiet, a music-box lullaby that grows over the game, and the rewind whirr as the sound of danger.
 3. Brightness, clear picture, reduce flashing, sound and story mode SHALL work as in the house game.
 4. All words SHALL be DOM text, large and readable by screen readers.
 5. Desktop keyboard and mouse, and touch screens, SHALL both work.
+
+### Requirement 11: The dream, the phone and the film
+**User story:** As Byeol, I want the game to feel like my own dream: my phone's system over a night that looks like a film.
+#### Acceptance criteria
+1. The cold open SHALL show Byeol falling asleep with her phone, then the ruined house. Its buttons SHALL read "close your eyes" (and "back to the dream" for returning players).
+2. The system SHALL look like a phone: the system font, frosted glass panels, rounded buttons, switches for settings.
+   - The night's clock SHALL sit in a black pill at the top (the island). A dot on it SHALL turn amber when the Caller is near and red when she hunts.
+   - The name call SHALL arrive as a notification from "home", with the two choices as its buttons.
+   - What the user carries SHALL show in a dock of icons with names. Icons SHALL be drawn, not taken from a font.
+   - Pause SHALL be a lock screen: the date (Saturday, October 31) and the night's clock above the settings.
+3. The picture SHALL look like a film: 2.39:1 black bars (on wide screens, switchable in pause), soft grain, no scanlines, plain white title cards ("Haewol / the first night", then "the second night" and on).
+4. Raising the camcorder SHALL pull the bars away and switch to the tape picture with its PLAY and timecode. Lowering it SHALL return to the film.
+5. All text SHALL stay large and high-contrast. Reduce flashing and reduced motion SHALL stop the grain and the animations.
+6. **Planned:** breathing as an action, and a last ending where Byeol wakes at dawn and changes (tasks 6-7).

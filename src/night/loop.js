@@ -44,3 +44,15 @@ export function timecode(sec) {
   const pad = (n) => String(n).padStart(2, '0');
   return `${pad(Math.floor(s / 3600))}:${pad(Math.floor(s / 60) % 60)}:${pad(s % 60)}`;
 }
+
+/** "HH:MM" for the lock screen and the island. */
+export function clockShort(sec) {
+  return timecode(sec).slice(0, 5);
+}
+
+const ORDINALS = ['first', 'second', 'third', 'fourth', 'fifth', 'sixth', 'seventh', 'eighth', 'ninth', 'tenth'];
+/** The title card for a night: "the first night", ... then "night 11". `loops` counts finished nights. */
+export function nightTitle(loops) {
+  const n = Math.max(0, Math.floor(loops));
+  return n < ORDINALS.length ? `the ${ORDINALS[n]} night` : `night ${n + 1}`;
+}

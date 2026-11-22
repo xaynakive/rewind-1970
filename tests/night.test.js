@@ -288,3 +288,16 @@ test('Wol herself is only a ghost at her desk, and her words keep the tone', () 
     ...village.parts.flatMap((p) => [p.openLine ?? ''])].join(' ').toLowerCase();
   for (const w of ['blood', 'gore', 'kill', 'dead body', 'corpse', 'drown', 'murder']) assert.ok(!words.includes(w), w);
 });
+
+// ----- the look (Requirement 11) -----
+
+test('each night gets a title card, and the island shows hours and minutes', async () => {
+  const { nightTitle, clockShort } = await import('../src/night/loop.js');
+  assert.equal(nightTitle(0), 'the first night');
+  assert.equal(nightTitle(1), 'the second night');
+  assert.equal(nightTitle(9), 'the tenth night');
+  assert.equal(nightTitle(10), 'night 11');
+  assert.equal(nightTitle(-3), 'the first night');
+  assert.equal(clockShort(clockAt(0)), '23:58');
+  assert.equal(clockShort(clockAt(LOOP_MS)), '00:00');
+});

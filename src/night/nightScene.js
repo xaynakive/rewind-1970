@@ -252,7 +252,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
 
   function refreshInventory() {
     const kept = level.items.filter((i) => has(i.id));
-    hud.setInventory(kept.filter((i) => i.kind !== 'note').map((i) => i.name));
+    hud.setInventory(kept.filter((i) => i.kind !== 'note').map((i) => ({ name: i.name, kind: i.kind })));
     hud.setNotes(kept.filter((i) => i.kind !== 'key').map((i) => ({ name: i.name, text: i.kind === 'memory' ? `${i.text} ${i.flashback.join(' ')}` : i.text })));
   }
   refreshInventory();
@@ -263,7 +263,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     if (save.calls.includes(id)) return;
     releaseLock();
     audio.setRain(0.3);
-    hud.ask(level.nameCalls[i % level.nameCalls.length], ['answer', 'stay quiet']).then((choice) => {
+    hud.ask(level.nameCalls[i % level.nameCalls.length], ['answer', 'stay quiet'], { from: 'home' }).then((choice) => {
       save = withNameChoice(save, id, choice === 0);
       onSave(save);
       audio.setRain(1);
@@ -547,7 +547,7 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
     if (mode.kind === 'inspect') {
       drawInspect(now, time, aspect);
       drawOsd(clockSec, true);
-      r.present({ source: 'scene', osd: true, time, tracking: 0.06, bleed: 0.4, noise: 0.03, glitch: 0, fade: Math.min(1, (now - mode.start) / 250), reduce, bloom: 1.3 });
+      r.present({ source: 'scene', osd: false, time, tracking: 0.02, bleed: 0.2, noise: 0.03, glitch: 0, fade: Math.min(1, (now - mode.start) / 250), reduce, bloom: 1.3, scan: 0 });
       hud.setPrompt(null);
       return;
     }
@@ -648,8 +648,10 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       spot, ripples: rip,
     });
 
-    // Picture
-    let glitch = 0, fade = 1, tracking = 0.16, noise = 0.055, bleed = 0.7;
+    // Picture. The dream is shot like film: clean, a little grain, no scanlines.
+    // The camcorder, flashbacks and rewinds are tape.
+    const tape = lens.recording || mode.kind === 'flashback' || mode.kind === 'rewind';
+    let glitch = 0, fade = 1, tracking = tape ? 0.16 : 0.02, noise = tape ? 0.055 : 0.045, bleed = tape ? 0.7 : 0.2;
     if (mode.kind === 'enter') {
       const e = (now - mode.start) / ENTER_MS;
       if (e >= 1) { mode = { kind: 'walk' }; hud.say(loopNo === 0 ? level.lines.start : level.lines.again, 5000); }
@@ -669,7 +671,9 @@ export function createNightScene({ r, audio, hud, stage, level, save: saved, set
       else { glitch = 0.6 + 0.4 * Math.sin(now * 0.03); tracking = 1; noise = 0.3; fade = Math.max(0, 1 - Math.max(0, e - 0.7) * 3.3); }
     }
     drawOsd(clockSec, mode.kind === 'hidden', mode.kind === 'rewind' ? '\u25C0\u25C0 REW' : 'PLAY \u25B6');
-    r.present({ source: 'scene', osd: true, time, tracking, bleed, noise, glitch, fade, reduce });
+    hud.setClock?.(clockSec);
+    hud.setThreat?.(!callerShown || s.storyMode ? 0 : hunting ? 2 : pdist < 9 ? 1 : 0);
+    r.present({ source: 'scene', osd: tape && mode.kind !== 'flashback', time, tracking, bleed, noise, glitch, fade, reduce, scan: tape ? 1 : 0 });
   }
 
   function drawInspect(now, time, aspect) {

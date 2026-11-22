@@ -262,7 +262,8 @@ function build(gl, canvas) {
       gl.uniform1f(vhsU.uScreenAspect, canvas.width / canvas.height);
       gl.uniform1f(vhsU.uSrcAspect, canvasSize[0] / canvasSize[1]);
       gl.uniform1f(vhsU.uBloom, p.bloom ?? 1);
-      gl.uniform1f(vhsU.uScan, picture.clear ? 0.35 : 1);
+      // `p.scan` lets a caller ask for no scanlines (Haewol's film look); the house game never passes it.
+      gl.uniform1f(vhsU.uScan, (p.scan ?? 1) * (picture.clear ? 0.35 : 1));
       gl.uniform1f(vhsU.uGrade, fromCanvas ? 0.4 : 1);
       gl.bindBuffer(gl.ARRAY_BUFFER, triangle);
       gl.enableVertexAttribArray(vhsPos);

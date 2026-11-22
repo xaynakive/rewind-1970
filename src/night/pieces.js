@@ -77,3 +77,18 @@ export function lantern(mb, lights, [x, y, z], weight = 1) {
   lights.push({ pos: [x, y - 0.2, z], color: [1, 0.36, 0.24], weight });
 }
 
+
+// ---------- colliders ----------
+
+const T = 0.12; // wall thickness for colliders
+
+/** Colliders for a wall along z at x (from z0 down to z1), leaving door gaps. */
+export function colZ(out, x, z0, z1, gaps = []) {
+  const cuts = [z0, ...gaps.flat(), z1].sort((a, b) => b - a);
+  for (let i = 0; i < cuts.length - 1; i += 2) out.push({ min: [x - T, cuts[i + 1]], max: [x + T, cuts[i]] });
+}
+export function colX(out, z, x0, x1, gaps = []) {
+  const cuts = [x0, ...gaps.flat(), x1].sort((a, b) => a - b);
+  for (let i = 0; i < cuts.length - 1; i += 2) out.push({ min: [cuts[i], z - T], max: [cuts[i + 1], z + T] });
+}
+

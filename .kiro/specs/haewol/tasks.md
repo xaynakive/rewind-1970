@@ -7,7 +7,7 @@ Each milestone ends in something playable.
   - _Requirements: 1, 2, 3, 4, 5.1–5.3, 5.6–5.7, 8, 10_
 - [x] 2. Yeonhwa's house: the shrine to Sae, the cassette recorder, keys, three memories, wardrobes to hide in
   - _Requirements: 5.4, 6.2, 7.1_
-- [ ] 3. Wol's house: the rite, the margins, the scratched photograph
+- [x] 3. Wol's house: the rite, the margins, the scratched photograph
   - _Requirements: 6.3, 7.6_
 - [ ] 4. The schoolroom: the chalkboard that writes back, Sae's desk, the corridor that grows
   - _Requirements: 6.4_

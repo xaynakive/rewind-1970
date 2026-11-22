@@ -195,7 +195,8 @@ test('the words follow the tone rules', () => {
 test("her house: three memories, the rite, and the key to Sae's room", () => {
   const ids = ['memory-tape', 'memory-ribbon', 'memory-telegram', 'note-rite', 'key-sae'];
   for (const id of ids) assert.ok(village.items.some((i) => i.id === id), id);
-  const mem = village.items.filter((i) => i.kind === 'memory' && i.id !== 'memory-boat');
+  const a = village.areas.find((x) => x.id === 'yeonhwa');
+  const mem = village.items.filter((i) => i.kind === 'memory' && i.pos[0] > a.min[0] && i.pos[0] < a.max[0] && i.pos[2] > a.min[1] && i.pos[2] < a.max[1]);
   assert.equal(mem.length, 3);
   for (const m of mem) assert.ok(m.flashback.length >= 3, m.id);
   // The key is hidden in the rice jar, and opens Sae's door; her ribbon is behind it.
@@ -235,4 +236,55 @@ test('the hiding places in her house look out from just outside their doors', ()
     const inBox = village.colliders.some((b) => h.view.pos[0] > b.min[0] && h.view.pos[0] < b.max[0] && h.view.pos[2] > b.min[1] && h.view.pos[2] < b.max[1]);
     assert.ok(!inBox, `${id} view is inside something`);
   }
+});
+
+// ----- Wol's house (Requirement 6.3) -----
+
+test("Wol's door is tied with Sae's thread: it opens with her ribbon", () => {
+  const door = village.parts.find((p) => p.id === 'wol-door');
+  assert.equal(door.needs, 'memory-ribbon');
+  assert.ok(door.collider && door.lockedText && door.openLine);
+});
+
+test("her house holds the spectacles, the rite, the blank page and the photograph", () => {
+  for (const id of ['memory-spectacles', 'note-rite-copy', 'note-undo', 'photo-scratched']) assert.ok(village.items.some((i) => i.id === id), id);
+  const spec = village.items.find((i) => i.id === 'memory-spectacles');
+  assert.equal(spec.kind, 'memory');
+  assert.equal(spec.inside, 'wol-drawer');
+  assert.ok(spec.flashback.length >= 3);
+  assert.equal(village.items.find((i) => i.id === 'note-undo').revealed, true, 'the page only shows through the lens');
+  assert.equal(village.items.find((i) => i.id === 'photo-scratched').inside, 'wol-chest');
+  for (const id of ['wol-drawer', 'wol-chest']) assert.ok(village.parts.some((p) => p.id === id), id);
+});
+
+test('her house is an indoor area with its own route, but she is not strongest there', () => {
+  const a = village.areas.find((x) => x.id === 'wol');
+  assert.ok(a && a.indoor && !a.strong && a.route.length >= 4);
+  const inside = (p) => p[0] > a.min[0] && p[0] < a.max[0] && p[1] > a.min[1] && p[1] < a.max[1];
+  for (const p of a.route) assert.ok(inside(p), `${p} is in Wol's house`);
+});
+
+test('the herb table can be left, and its view is not inside anything', () => {
+  const h = village.hides.find((x) => x.id === 'herb-table');
+  assert.ok(h && h.low);
+  for (const b of village.colliders) assert.ok(!overlaps(h.exit.pos, b), 'herb-table exit');
+  // You crouch under the table top (0.78 m above her floor) and look out through the study door.
+  assert.ok(h.view.pos[1] < 0.3 + 0.78);
+  assert.ok(Math.abs(h.view.yaw + Math.PI / 2) < 1e-9, 'it faces the study door');
+});
+
+test('her book answers every memory, and has a line for when you bring nothing', () => {
+  const book = village.readables.find((r) => r.id === 'wol-book');
+  assert.ok(book.intro && book.fallback);
+  const memories = village.items.filter((i) => i.kind === 'memory').map((i) => i.id);
+  for (const id of memories) assert.ok(book.answers[id], `no answer for ${id}`);
+});
+
+test('Wol herself is only a ghost at her desk, and her words keep the tone', () => {
+  const g = village.ghosts.find((x) => x.id === 'wol');
+  assert.ok(g && g.line);
+  const book = village.readables.find((r) => r.id === 'wol-book');
+  const words = [g.line, book.intro, book.fallback, ...Object.values(book.answers),
+    ...village.parts.flatMap((p) => [p.openLine ?? ''])].join(' ').toLowerCase();
+  for (const w of ['blood', 'gore', 'kill', 'dead body', 'corpse', 'drown', 'murder']) assert.ok(!words.includes(w), w);
 });

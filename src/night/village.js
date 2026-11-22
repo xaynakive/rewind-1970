@@ -11,6 +11,7 @@ import {
   GLOSS, WATER, wood, darkWood, paper, ink, stone, stoneDark, roofTile, lanternRed, waterCol, rainColor, CALLER_RED, mulberry32,
   wallZ, wallX, eaves, lantern,
 } from './pieces.js';
+import { buildWol, WOL, WOL_FLOOR, WOL_ROUTE, WOL_ITEM_IDS } from './wol.js';
 import { buildYeonhwa, YEONHWA, FLOOR, YEONHWA_ROUTE, YEONHWA_ITEM_IDS } from './yeonhwa.js';
 import { boundsOf, grow, footprint, noteMesh, inspectOf } from '../systems/memory/market.js';
 
@@ -43,6 +44,8 @@ export const STONE_HALF = 0.36;
 /** The ground height under a point, and whether it is the sunken courtyard floor. */
 export function groundAt(x, z, stones = STONES) {
   if (x > YEONHWA.x0 && x < YEONHWA.x1 && z < YEONHWA.z0 && z > YEONHWA.z1) return { y: FLOOR, sunken: false, stone: false };
+  if (x > WOL.x0 && x < WOL.x1 && z < WOL.z0 && z > WOL.z1) return { y: WOL_FLOOR, sunken: false, stone: false };
+  if (x <= WOL.x0 && x > WOL.x0 - 0.5 && z < -2.25 && z > -3.75) return { y: 0.15, sunken: false, stone: false }; // her doorstep
   if (x >= YEONHWA.x1 && x < YEONHWA.x1 + 0.5 && z < -4.25 && z > -5.75) return { y: 0.15, sunken: false, stone: false }; // her doorstep
   if (x > INNER.x0 && x < INNER.x1 && z < INNER.z0 && z > INNER.z1) {
     for (const s of stones) if (Math.abs(x - s[0]) < STONE_HALF + 0.05 && Math.abs(z - s[1]) < STONE_HALF + 0.05) return { y: STONE_TOP, sunken: false, stone: true };
@@ -95,6 +98,8 @@ export function buildVillage() {
   const items = [];
   const hides = [];
   const lights = [];
+  const readables = [];
+  const ghosts = [];
   const rand = mulberry32(1031);
 
   // ----- the entry house -----
@@ -250,7 +255,9 @@ export function buildVillage() {
       // West: Yeonhwa's house front, with her door at z -4.4..-5.6.
       { min: [YARD.x0 - 0.12, -4.4], max: [YARD.x0 + 0.05, YARD.z0] },
       { min: [YARD.x0 - 0.12, YARD.z1], max: [YARD.x0 + 0.05, -5.6] },
-      { min: [YARD.x1, YARD.z1], max: [YARD.x1 + 0.3, YARD.z0] },
+      // East: Wol's house front, with her door at z -2.4..-3.6.
+      { min: [YARD.x1 - 0.05, -2.4], max: [YARD.x1 + 0.12, YARD.z0] },
+      { min: [YARD.x1 - 0.05, YARD.z1], max: [YARD.x1 + 0.12, -3.6] },
       { min: [YARD.x0, YARD.z1 - 0.3], max: [YARD.x1, YARD.z1] },
     );
     // Doors that won't open tonight (each milestone opens one).
@@ -260,7 +267,6 @@ export function buildVillage() {
       d.box([center[0], center[1] + 0.3, center[2]], size.map((s) => (s < 0.2 ? s + 0.02 : s * 0.7)), shade(paper, 0.6));
       parts.push({ id, kind: 'door', label, mesh: d.build(), bounds: grow(boundsOf(center, size), 0.1), transform: () => translation([0, 0, 0]), needs: `open:${id}`, lockedText });
     };
-    shut('wol-door', "Wol's door", [YARD.x1 - 0.04, 1.1, -3], [0.06, 2.2, 1.2], 'herbs hang from the eaves. the door is tied shut with red thread.');
     shut('school-door', 'the schoolroom door', [-5, 1.1, YARD.z1 + 0.04], [1.2, 2.2, 0.06], 'small shoes are lined up outside. the door is stuck.');
     shut('hill-gate', 'the gate to the hill', [9, 1.1, YARD.z1 + 0.04], [1.4, 2.2, 0.06], 'the path to the shrine on the hill. you know too little to climb it.');
     // The hill above the north wall, dark against the storm.
@@ -270,6 +276,7 @@ export function buildVillage() {
   }
 
   buildYeonhwa({ mb, revealed, colliders, parts, items, hides, lights });
+  buildWol({ mb, revealed, colliders, parts, items, hides, lights, readables, ghosts });
   buildRain(rain, rand);
 
   // ----- things to find -----
@@ -294,11 +301,11 @@ export function buildVillage() {
   });
 
   // The TV in the entry house: one more line of the tape each loop.
-  const readables = [{
+  readables.unshift({
     id: 'tv', label: 'look at the tv',
     bounds: grow(boundsOf([0, 0.86, HOUSE.z1 - 0.45], [0.7, 0.52, 0.5]), 0.08),
     lines: TV_LINES,
-  }];
+  });
 
   return {
     id: 'village',
@@ -308,7 +315,7 @@ export function buildVillage() {
     revealed: revealed.build(),
     rain: rain.build(),
     water: waterMesh(),
-    parts, items, hides, colliders, lights, readables,
+    parts, items, hides, colliders, lights, readables, ghosts,
     stones: STONES,
     groundAt: (x, z) => groundAt(x, z, STONES),
     start: { pos: [0, 10.6], yaw: 0 },
@@ -318,6 +325,9 @@ export function buildVillage() {
       { id: 'yeonhwa', min: [YEONHWA.x0, YEONHWA.z1], max: [YEONHWA.x1, YEONHWA.z0], indoor: true, strong: true,
         route: YEONHWA_ROUTE, enterLine: 'her house. it smells of incense and river water. do not linger.',
         callerLine: 'the shrine candles gutter. she is home.' },
+      { id: 'wol', min: [WOL.x0, WOL.z1], max: [WOL.x1, WOL.z0], indoor: true, strong: false,
+        route: WOL_ROUTE, enterLine: "wol's house. herbs hang from every beam. the walls are papered with her handwriting.",
+        callerLine: 'the herbs sway, though there is no wind in here. she has come to her mother\'s house.' },
     ],
     route: [[-9.6, 3.4], [-9.6, -13.6], [-3, -13.6], [-1.6, -8.2], [3.4, -8.2], [9.4, -11], [9.6, 0.8], [4.2, 3.6], [0.0, 1.0], [-4.2, 3.6]],
     sae: { pos: [-1.5, -3.4], yaw: 2.4, scale: 0.6 },
@@ -363,4 +373,4 @@ function waterMesh() {
   return mb.build();
 }
 
-export const VILLAGE_ITEM_IDS = ['memory-boat', 'note-water', ...YEONHWA_ITEM_IDS];
+export const VILLAGE_ITEM_IDS = ['memory-boat', 'note-water', ...YEONHWA_ITEM_IDS, ...WOL_ITEM_IDS];

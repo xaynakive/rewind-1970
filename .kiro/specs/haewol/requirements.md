@@ -73,7 +73,7 @@ Inspirations named by the user: White Day, Paranormal HK, East and Southeast Asi
 #### Acceptance criteria
 1. **The entry house:** where every loop begins. A dead TV, the table where the camcorder was found. Always safe.
 2. **Yeonhwa's house:** her shrine to Sae, the warm cassette recorder. Rooms open with keys. She is strongest here: inside it she always sees you as if your light were up, and she follows you in. Three memories, and two places to hide.
-3. **Wol's house:** herb-dark, papered with notes that explain the rite and, in the margins, how to undo it.
+3. **Wol's house:** herb-dark, papered with notes that explain the rite and, in the margins, how to undo it. Its door SHALL stay tied shut until the user carries Sae's ribbon. The margins and the page that tells how to undo the rite SHALL be readable only through the lens. Her book SHALL answer each memory the user carries. One memory, and one place to hide.
 4. **The schoolroom:** small desks, a chalkboard that writes back when you're not looking, Sae's things, and a corridor that is longer each time you run it.
 5. **The shrine on the hill:** reachable only with enough of the truth. The endings play here.
 6. **The drowned village:** optional and secret, below the still water.

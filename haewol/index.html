@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#07060a">
+  <meta name="description" content="Rewind 1970: Haewol. A tape dated October 31st, 1970, a night that never ended. Play it, and the house remembers you back.">
+  <title>Rewind 1970: Haewol</title>
+  <link rel="stylesheet" href="../style.css">
+  <link rel="stylesheet" href="haewol.css">
+</head>
+<body class="in-memory haewol">
+  <main id="stage" aria-label="Rewind 1970: Haewol">
+    <canvas id="screen" aria-hidden="true"></canvas>
+
+    <section id="intro" class="nt-intro" aria-labelledby="intro-title">
+      <h1 id="intro-title" class="nt-title">rewind<br>1970</h1>
+      <div class="nt-intro-lines" aria-live="polite"></div>
+      <div class="nt-intro-actions">
+        <button type="button" data-intro="play" class="nt-play" hidden>press play</button>
+        <button type="button" data-intro="skip" class="nt-skip" hidden>skip to the night</button>
+      </div>
+      <p class="nt-intro-note">headphones help. no loud jump scares. brightness and story mode are in the pause menu (esc).</p>
+    </section>
+
+    <div id="memory-hud" class="memory-hud" hidden>
+      <div class="mem-crosshair" aria-hidden="true"></div>
+      <p class="mem-prompt" aria-live="polite"></p>
+      <p class="mem-line" role="status" aria-live="polite"></p>
+      <p class="mem-help"></p>
+      <ul class="mem-inventory" aria-label="what you carry"></ul>
+      <div class="mem-caption" hidden>
+        <h2 class="mem-caption-name"></h2>
+        <p class="mem-caption-text"></p>
+        <p class="mem-caption-help"></p>
+      </div>
+      <div class="nt-finder" hidden aria-label="camcorder viewfinder">
+        <span class="nt-corner tl"></span><span class="nt-corner tr"></span><span class="nt-corner bl"></span><span class="nt-corner br"></span>
+        <p class="nt-rec"><span class="nt-tally" aria-hidden="true"></span>REC</p>
+        <div class="nt-battery" aria-hidden="true"><div class="nt-battery-level"></div></div>
+        <p class="nt-battery-text sr-only"></p>
+      </div>
+      <div class="nt-choice" hidden role="dialog" aria-live="assertive">
+        <p class="nt-choice-text"></p>
+        <div class="nt-choice-buttons"></div>
+      </div>
+      <div class="nt-flashback" hidden>
+        <p class="nt-flashback-tag" aria-hidden="true">memory</p>
+        <p class="nt-flashback-line" role="status" aria-live="polite"></p>
+      </div>
+      <div class="mem-touch" hidden>
+        <button type="button" data-mem="pause" class="mem-btn mem-btn-pause">pause</button>
+        <button type="button" data-mem="notes" class="mem-btn mem-btn-notes">notes</button>
+        <button type="button" data-mem="light" class="mem-btn mem-btn-light">candle</button>
+        <button type="button" data-mem="lens" class="mem-btn mem-btn-lens">lens</button>
+        <button type="button" data-mem="use" class="mem-btn mem-btn-use">use</button>
+      </div>
+      <div class="mem-vignette" aria-hidden="true"></div>
+    </div>
+
+    <div id="no-webgl" class="no-webgl" hidden>
+      <p>your browser can't show the night (WebGL is off or unsupported).</p>
+    </div>
+  </main>
+
+  <dialog id="memory-pause" class="panel" aria-labelledby="memory-pause-title">
+    <h2 id="memory-pause-title">paused</h2>
+    <p class="case-intro">the tape holds still. the clock doesn't move while you're here.</p>
+    <label class="toggle"><input type="checkbox" name="memStory"> story mode <span class="toggle-note">(she never chases you)</span></label>
+    <label class="toggle"><input type="checkbox" name="clearPicture"> clear picture <span class="toggle-note">(brighter, steadier)</span></label>
+    <label class="toggle"><input type="checkbox" name="reduceFlashing"> reduce flashing</label>
+    <label class="toggle"><input type="checkbox" name="sound"> sound</label>
+    <label class="nt-slider">brightness <input type="range" name="brightness" min="0" max="100" step="5"></label>
+    <p class="nt-progress"></p>
+    <div class="actions">
+      <button type="button" data-action="leave">stop the tape</button>
+      <button type="button" data-action="notes">what you found</button>
+      <button type="button" data-action="resume">keep going</button>
+    </div>
+  </dialog>
+
+  <dialog id="memory-notes" class="panel" aria-labelledby="memory-notes-title">
+    <h2 id="memory-notes-title">what you found</h2>
+    <ul class="reader-list mem-notes-list"></ul>
+    <div class="actions">
+      <button type="button" data-action="close">close</button>
+    </div>
+  </dialog>
+
+  <noscript><p class="no-webgl">this tape needs JavaScript to play.</p></noscript>
+  <script type="module" src="../src/night/main.js"></script>
+</body>
+</html>

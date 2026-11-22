@@ -1,0 +1,96 @@
+/* Rewind 1970: Haewol. On top of ../style.css. Spec: .kiro/specs/haewol */
+
+/* ----- the cold open ----- */
+.nt-intro {
+  position: absolute; inset: 0; z-index: 4;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 1.4rem; padding: 6vh 6vw; text-align: center;
+  background: radial-gradient(ellipse at center, rgba(7, 6, 10, 0.55), rgba(7, 6, 10, 0.92));
+}
+.nt-intro[hidden] { display: none; }
+.nt-title {
+  margin: 0; font-family: var(--mono); font-weight: normal;
+  font-size: clamp(42px, 9vw, 110px); line-height: 0.95; letter-spacing: 0.2em;
+  color: #f1e9d2; text-shadow: 2px 0 rgba(200, 40, 30, 0.6), -2px 0 rgba(60, 160, 200, 0.45);
+}
+.nt-intro-lines { max-width: 760px; min-height: 9em; }
+.nt-intro-lines p {
+  margin: 0 0 0.7rem; font-size: clamp(18px, 2.3vw, 28px); line-height: 1.45;
+  color: #f4ecd6; text-shadow: 0 0 8px #000;
+  animation: nt-in 1.2s ease both;
+}
+@keyframes nt-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .nt-intro-lines p { animation: none; } }
+.nt-intro-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+.nt-play, .nt-skip {
+  font-family: var(--mono); font-size: clamp(18px, 2.2vw, 26px); letter-spacing: 0.12em;
+  min-height: 56px; padding: 0 1.6rem; color: #f4ecd6; background: rgba(13, 12, 16, 0.8);
+  border: 1px solid #c8281e; cursor: pointer;
+}
+.nt-skip { border-color: #6a6252; font-size: clamp(15px, 1.7vw, 20px); }
+.nt-play:focus-visible, .nt-skip:focus-visible { outline: 2px solid #f4ecd6; outline-offset: 3px; }
+.nt-intro-note { margin: 0; max-width: 640px; font-size: clamp(14px, 1.5vw, 18px); opacity: 0.75; }
+
+/* ----- the viewfinder ----- */
+.nt-finder { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.nt-finder[hidden] { display: none; }
+/* Through the lens the world goes green-grey, like an old camcorder's monitor. */
+.memory-hud.recording::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  backdrop-filter: grayscale(0.7) sepia(0.25) hue-rotate(55deg) contrast(1.15) brightness(1.15);
+  -webkit-backdrop-filter: grayscale(0.7) sepia(0.25) hue-rotate(55deg) contrast(1.15) brightness(1.15);
+}
+.nt-corner { position: absolute; width: 46px; height: 46px; border: 0 solid rgba(244, 236, 214, 0.85); }
+.nt-corner.tl { left: 7%; top: 12%; border-left-width: 3px; border-top-width: 3px; }
+.nt-corner.tr { right: 7%; top: 12%; border-right-width: 3px; border-top-width: 3px; }
+.nt-corner.bl { left: 7%; bottom: 14%; border-left-width: 3px; border-bottom-width: 3px; }
+.nt-corner.br { right: 7%; bottom: 14%; border-right-width: 3px; border-bottom-width: 3px; }
+.nt-rec {
+  position: absolute; right: calc(7% + 60px); top: calc(12% + 6px); margin: 0;
+  font-family: var(--mono); font-size: clamp(18px, 2.2vw, 28px); letter-spacing: 0.1em; color: #f4ecd6;
+  text-shadow: 0 0 6px #000; display: flex; align-items: center; gap: 0.5rem;
+}
+.nt-tally { width: 0.8em; height: 0.8em; border-radius: 50%; background: #e0261a; box-shadow: 0 0 12px #e0261a; animation: nt-blink 1s steps(2) infinite; }
+@keyframes nt-blink { 50% { opacity: 0.25; } }
+@media (prefers-reduced-motion: reduce) { .nt-tally { animation: none; } }
+.nt-battery {
+  position: absolute; left: calc(7% + 60px); top: calc(12% + 10px);
+  width: 90px; height: 22px; border: 2px solid #f4ecd6; padding: 2px; box-shadow: 0 0 6px #000;
+}
+.nt-battery::after { content: ""; position: absolute; right: -8px; top: 5px; width: 5px; height: 9px; background: #f4ecd6; }
+.nt-battery-level { height: 100%; background: #f4ecd6; transition: width 0.2s linear; }
+.nt-battery-level.low { background: #e0261a; }
+
+/* ----- the name ----- */
+.nt-choice {
+  position: absolute; left: 50%; top: 58%; transform: translateX(-50%); z-index: 3;
+  width: min(92%, 720px); text-align: center; pointer-events: auto;
+  background: rgba(7, 6, 10, 0.82); border: 1px solid #5a5446; padding: 1.2rem 1.4rem 1.4rem;
+}
+.nt-choice[hidden] { display: none; }
+.nt-choice-text { margin: 0 0 1rem; font-size: clamp(19px, 2.4vw, 30px); font-style: italic; color: #f4ecd6; line-height: 1.4; }
+.nt-choice-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+.nt-choice-buttons button {
+  font-family: var(--mono); font-size: clamp(17px, 2vw, 24px); min-height: 52px; min-width: 170px;
+  color: #f4ecd6; background: #0d0c10; border: 1px solid #8a8070; cursor: pointer;
+}
+.nt-choice-buttons button:focus-visible { outline: 2px solid #f4ecd6; outline-offset: 3px; }
+.memory-hud.choosing .mem-crosshair, .memory-hud.choosing .mem-prompt, .memory-hud.choosing .mem-help { display: none; }
+
+/* ----- flashbacks ----- */
+.memory-hud.flashback::before {
+  content: ""; position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  backdrop-filter: sepia(0.85) contrast(1.1) brightness(1.1);
+  -webkit-backdrop-filter: sepia(0.85) contrast(1.1) brightness(1.1);
+}
+.nt-flashback { position: absolute; inset: 0; z-index: 2; pointer-events: none; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+.nt-flashback[hidden] { display: none; }
+.nt-flashback-tag { margin: 0 0 1rem; font-family: var(--mono); letter-spacing: 0.4em; font-size: clamp(18px, 2vw, 24px); color: #ff4a3a; text-shadow: 0 0 6px #000; }
+.nt-flashback-line { margin: 0; width: min(88%, 820px); text-align: center; font-size: clamp(20px, 2.7vw, 34px); line-height: 1.45; font-style: italic; color: #f4ecd6; text-shadow: 0 0 8px #000, 0 0 18px #000; }
+.memory-hud.flashback .mem-crosshair, .memory-hud.flashback .mem-prompt, .memory-hud.flashback .mem-line, .memory-hud.flashback .mem-help { display: none; }
+
+/* ----- touch and pause ----- */
+.mem-btn-lens { right: 120px; bottom: calc(18% + 80px); border-color: #c8281e; }
+.nt-slider { display: flex; align-items: center; gap: 0.8rem; margin: 0.5rem 0; min-height: 32px; }
+.nt-slider input { flex: 1; }
+.nt-progress { opacity: 0.8; margin: 0.6rem 0 0; }
